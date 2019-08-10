@@ -1,0 +1,49 @@
+name:                hpview
+version:             0.1.0.0
+github:              "portnov/hpview"
+license:             BSD3
+author:              "Ilya V. Portnov"
+maintainer:          "portnov84@rambler.ru"
+copyright:           "2019 Ilya V. Portnov"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            GHC .hp files viewer
+category:            Development
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/portnov/hpview#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- mtl
+- text
+- attoparsec
+- haskell-gi-base
+- gi-gdk
+- gi-gtk
+- gi-cairo
+- cairo
+- Chart
+- Chart-cairo
+- time
+- colour
+- data-default-class
+- lens
+- hashable
+
+executables:
+  hpview-exe:
+    main:                Main.hs
+    source-dirs:         src
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+

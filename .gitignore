@@ -1,0 +1,8 @@
+.stack-work/
+hpview.cabal
+*~
+*.hp
+*.swp
+*.hi
+*.o
+*.log
