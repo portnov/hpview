@@ -32,8 +32,9 @@ runWindow heap = do
   onWidgetDestroy window mainQuit
 
   pickFnRef <- newIORef (const Nothing)
-  let datas = reverse $ take 10 $ allSamplesData heap
-  forM_ datas print
+  let datas = allSamplesData heap
+  let datas1 = allSamplesData1 heap
+  forM_ datas1 print
 
   area <- drawingAreaNew
   onWidgetDraw area $ \ctx -> do

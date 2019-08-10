@@ -16,7 +16,7 @@ import Operations
 
 nameColor :: T.Text -> Colour Double
 nameColor name =
-  let h = fromIntegral (hash name) :: Word8
+  let h = fromIntegral (hash name `mod` 255) :: Word8
       h' = (fromIntegral h / 255) * 360
       r = (fromIntegral h / 255)
       v = (1 - r) * 0.5 + r*0.9
