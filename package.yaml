@@ -39,7 +39,7 @@ dependencies:
 - hashable
 
 executables:
-  hpview-exe:
+  hpview:
     main:                Main.hs
     source-dirs:         src
     ghc-options:
