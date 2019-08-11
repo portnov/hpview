@@ -33,8 +33,6 @@ runWindow heap = do
 
   pickFnRef <- newIORef (const Nothing)
   let datas = allSamplesData heap
-  let datas1 = allSamplesData1 heap
-  forM_ datas1 print
 
   area <- drawingAreaNew
   onWidgetDraw area $ \ctx -> do

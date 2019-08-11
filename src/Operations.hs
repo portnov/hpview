@@ -54,29 +54,6 @@ allSamples h =
 
 type SamplesData = [(T.Text, [(Double, (Int, Int))])]
 
-allSamplesData1 :: Heap -> [(T.Text, (Double, (Int, Int)))]
-allSamplesData1 h = concatMap convert sortedSamples
-  where
-    convert :: Sample [Item] -> [(T.Text, (Double, (Int, Int)))]
-    convert sample = [(key, (sampleTime sample, range)) | (key, range) <- stitch (sampleItems sample)]
-
-    stitch :: [Item] -> [(T.Text, (Int, Int))]
-    stitch items =
-      let values = tail $ scanl (+) 0 $ map itemValue items
-      in  zip (map itemName items) $ zip (0 : values) values
-
-    sortedSamples =
-      [Sample time (map toItem $ sortOn (negate . weight . fst) (extend items)) | Sample time items <- heapSamples h]
-
-    extend items =
-      let otherKeys = filter (`M.notMember` items) keys
-      in  M.assocs items ++ [(key, 0) | key <- otherKeys]
-
-    keys = allKeys h
-    weights = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight key = fromMaybe 0 $ M.lookup key weights
-    toItem (key, value) = Item key value
-
 allSamplesData :: Heap -> SamplesData
 allSamplesData h = fromMap $ toMap $ concatMap convert sortedSamples
   where
