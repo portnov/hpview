@@ -17,11 +17,11 @@ import Operations
 nameColor :: T.Text -> Colour Double
 nameColor name =
   let h = fromIntegral (hash name `mod` 255) :: Word8
-      h' = (fromIntegral h / 255) * 360
+      hue = fromIntegral (hash name `mod` 360)
       r = (fromIntegral h / 255)
       v = (1 - r) * 0.5 + r*0.9
 
-      hslColor = hsl h' 0.5 v
+      hslColor = hsl hue 0.5 v
   in  sRGB (channelRed hslColor) (channelGreen hslColor) (channelBlue hslColor)
 
 makeChart :: T.Text -> Maybe T.Text -> SamplesData -> Layout Double Int
