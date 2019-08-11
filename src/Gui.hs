@@ -35,7 +35,7 @@ runWindow heap = do
 
   pickFnRef <- newIORef (const Nothing)
   highlightRef <- newIORef Nothing
-  let datas = allSamplesData heap
+  let datas = allSamplesData $ filterHeap 10 (const True) heap
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
 
   area <- drawingAreaNew

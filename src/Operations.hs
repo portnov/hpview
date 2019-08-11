@@ -22,6 +22,14 @@ parseName name =
         in  NameInfo pkg name mod local
     _ -> NameInfo global name global name
 
+filterHeap :: Int -> (T.Text -> Bool) -> Heap -> Heap
+filterHeap n good heap = heap {heapSamples = map filterSample (heapSamples heap)}
+  where
+    keys = allKeysSorted heap
+    goodKeys = S.fromList $ filter good $ take n keys
+    filterSample sample = sample {sampleItems = M.filterWithKey isGoodItem (sampleItems sample)}
+    isGoodItem key _ = key `S.member` goodKeys
+
 allKeys :: Heap -> [T.Text]
 allKeys h =
   S.toList $ S.unions [S.fromList (M.keys $ sampleItems sample) | sample <- heapSamples h]
@@ -70,7 +78,7 @@ allSamplesData h = fromMap $ toMap $ concatMap convert sortedSamples
 
     fromMap :: M.Map T.Text [(Double, (Int, Int))] -> [(T.Text, [(Double, (Int, Int))])]
     fromMap m =
-      [(key, m M.! key) | key <- take 10 $ sortOn (negate . weight) keys]
+      [(key, m M.! key) | key <- sortOn (negate . weight) keys]
 
     sortedSamples =
       [Sample time (map toItem $ sortOn (weight . fst) (extend items)) | Sample time items <- heapSamples h]
