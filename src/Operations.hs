@@ -87,20 +87,23 @@ allSamplesData h = fromMap $ toMap $ concatMap convert sortedSamples
 searchKey :: SamplesData -> Double -> Int -> Maybe T.Text
 searchKey [] x y = Nothing
 searchKey (plot : plots) x y =
-    case check plot x y of
+    case check plot x (fromIntegral y) of
       Nothing -> searchKey plots x y
       Just key -> Just key
   where
     check (key, samples) x y =
-      if checkSamples 0 samples x y
+      if checkSamples 0 (0,0) samples x y
         then Just key
         else Nothing
 
-    checkSamples _ [] x y = False
-    checkSamples prevX ((xn, (y1, y2)) : samples) x y =
+    interpolate x0 x1 y0 y1 x = (x - x0) * (y1 - y0) / (x1 - x0) + y0
+
+    checkSamples _ _ [] _ _ = False
+    checkSamples prevX (prevY1, prevY2) ((xn, (y1, y2)) : samples) x y =
       if prevX <= x && x <= xn
-        then if y1 <= y && y <= y2
-               then True
-               else False
-        else checkSamples xn samples x y
+        then
+          let y1' = interpolate prevX xn (fromIntegral prevY1) (fromIntegral y1) x
+              y2' = interpolate prevX xn (fromIntegral prevY2) (fromIntegral y2) x
+          in y1' <= y && y <= y2'
+        else checkSamples xn (y1, y2) samples x y
 

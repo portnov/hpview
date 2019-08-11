@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module Gui where
 
@@ -9,6 +10,7 @@ import Data.Colour.SRGB
 import Data.Colour.Names
 import Data.Int
 import Data.IORef
+import qualified Data.Text as T
 import qualified GI.Gtk as GI (main, init)
 import qualified GI.Gdk
 import GI.Gdk.Structs
@@ -32,41 +34,54 @@ runWindow heap = do
   onWidgetDestroy window mainQuit
 
   pickFnRef <- newIORef (const Nothing)
+  highlightRef <- newIORef Nothing
   let datas = allSamplesData heap
 
   area <- drawingAreaNew
   onWidgetDraw area $ \ctx -> do
       renderWithContext ctx $ do
-          fn <- drawChart area datas
+          mbHighlight <- liftIO $ readIORef highlightRef
+          fn <- drawChart mbHighlight area datas
           liftIO $ writeIORef pickFnRef fn
       return True
 
   widgetAddEvents area [GI.Gdk.EventMaskAllEventsMask]
 
-  onWidgetButtonPressEvent area $ \ev -> do
-      x <- getEventButtonX ev
-      y <- getEventButtonY ev
+  vbox <- boxNew OrientationVertical 0
+  boxPackStart vbox area True True 0
+
+  status <- statusbarNew
+  statusContext <- statusbarGetContextId status "Status"
+  boxPackStart vbox status False False 0
+
+  onWidgetMotionNotifyEvent area $ \ev -> do
+      x <- getEventMotionX ev
+      y <- getEventMotionY ev
       pickFn <- readIORef pickFnRef
       case pickFn (Chart.Point x y) of
         Just (LayoutPick_PlotArea x y _) -> do
-          print (x,y)
           case searchKey datas x y of
-            Just key -> print key
+            Just key -> do
+                statusbarPush status statusContext key
+                mbPrevKey <- readIORef highlightRef
+                writeIORef highlightRef (Just key)
+                when (mbPrevKey /= Just key) $
+                  widgetQueueDraw area
             _ -> return ()
         _ -> return ()
       return True
 
-  setContainerChild window area
+  setContainerChild window vbox
   widgetShowAll window
   -- All Gtk+ applications must run the main event loop. Control ends here and
   -- waits for an event to occur (like a key press or mouse event).
   GI.main
 
-drawChart :: DrawingArea -> SamplesData -> Render (PickFn (LayoutPick Double Int Int))
-drawChart area datas = do
+drawChart :: Maybe T.Text -> DrawingArea -> SamplesData -> Render (PickFn (LayoutPick Double Int Int))
+drawChart mbHighlight area datas = do
   width <- liftIO $ widgetGetAllocatedWidth area
   height <- liftIO $ widgetGetAllocatedHeight area
-  renderChart (makeChart datas) (width, height)
+  renderChart (makeChart mbHighlight datas) (width, height)
 
 renderChart :: Chart.Layout Double Int -> (Int32, Int32) -> Render (PickFn (LayoutPick Double Int Int))
 renderChart chart (width, height) = do
