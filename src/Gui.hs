@@ -62,8 +62,9 @@ runWindow heap = do
       case pickFn (Chart.Point x y) of
         Just (LayoutPick_PlotArea x y _) -> do
           case searchKey datas x y of
-            Just key -> do
-                statusbarPush status statusContext key
+            Just (key, x, dy) -> do
+                let text = "Key: " <> key <> ": " <> T.pack (show dy) <> " at " <> T.pack (show x) <> "s"
+                statusbarPush status statusContext text
                 mbPrevKey <- readIORef highlightRef
                 writeIORef highlightRef (Just key)
                 when (mbPrevKey /= Just key) $
