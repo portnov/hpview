@@ -36,12 +36,13 @@ runWindow heap = do
   pickFnRef <- newIORef (const Nothing)
   highlightRef <- newIORef Nothing
   let datas = allSamplesData heap
+  let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
 
   area <- drawingAreaNew
   onWidgetDraw area $ \ctx -> do
       renderWithContext ctx $ do
           mbHighlight <- liftIO $ readIORef highlightRef
-          fn <- drawChart mbHighlight area datas
+          fn <- drawChart title mbHighlight area datas
           liftIO $ writeIORef pickFnRef fn
       return True
 
@@ -77,11 +78,11 @@ runWindow heap = do
   -- waits for an event to occur (like a key press or mouse event).
   GI.main
 
-drawChart :: Maybe T.Text -> DrawingArea -> SamplesData -> Render (PickFn (LayoutPick Double Int Int))
-drawChart mbHighlight area datas = do
+drawChart :: T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> Render (PickFn (LayoutPick Double Int Int))
+drawChart title mbHighlight area datas = do
   width <- liftIO $ widgetGetAllocatedWidth area
   height <- liftIO $ widgetGetAllocatedHeight area
-  renderChart (makeChart mbHighlight datas) (width, height)
+  renderChart (makeChart title mbHighlight datas) (width, height)
 
 renderChart :: Chart.Layout Double Int -> (Int32, Int32) -> Render (PickFn (LayoutPick Double Int Int))
 renderChart chart (width, height) = do

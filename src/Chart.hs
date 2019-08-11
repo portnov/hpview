@@ -24,8 +24,8 @@ nameColor name =
       hslColor = hsl h' 0.5 v
   in  sRGB (channelRed hslColor) (channelGreen hslColor) (channelBlue hslColor)
 
-makeChart :: Maybe T.Text -> SamplesData -> Layout Double Int
-makeChart mbHighlight datas =
+makeChart :: T.Text -> Maybe T.Text -> SamplesData -> Layout Double Int
+makeChart title mbHighlight datas =
   let mkPlot (name, samples) =
           plot_fillbetween_style .~ solidFillStyle (fillColor name)
           $ plot_fillbetween_line .~ Just (solidLine (lineWidth name) (lineColor name))
@@ -45,6 +45,7 @@ makeChart mbHighlight datas =
 
   in layout_grid_last .~ True
              $ layout_plots .~ (map (toPlot . mkPlot) datas)
+             $ layout_title .~ (T.unpack title)
 --              $ layout_legend .~ Nothing
              $ def
 
