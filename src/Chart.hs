@@ -27,10 +27,14 @@ nameColor name =
 makeChart :: SamplesData -> Layout Double Int
 makeChart datas =
   let mkPlot (name, samples) =
-          plot_fillbetween_style .~ solidFillStyle (opaque $ nameColor name)
+          plot_fillbetween_style .~ solidFillStyle (fillColor name)
+          $ plot_fillbetween_line .~ Just (solidLine 1 (lineColor name))
           $ plot_fillbetween_title .~ (T.unpack $ niFullName $ parseName name)
           $ plot_fillbetween_values .~ samples
           $ def
+      
+      fillColor name = opaque $ nameColor name
+      lineColor name = darken 0.5 (fillColor name)
 
   in layout_grid_last .~ True
              $ layout_plots .~ (map (toPlot . mkPlot) datas)
