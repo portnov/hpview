@@ -11,6 +11,8 @@ import Data.Colour.Names
 import Data.Int
 import Data.IORef
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import Data.Text.Format.Heavy (format)
 import qualified GI.Gtk as GI (main, init)
 import qualified GI.Gdk
 import GI.Gdk.Structs
@@ -63,8 +65,10 @@ runWindow heap = do
         Just (LayoutPick_PlotArea x y _) -> do
           case searchKey datas x y of
             Just (key, x, dy) -> do
-                let text = "Key: " <> key <> ": " <> T.pack (show dy) <> " at " <> T.pack (show x) <> "s"
-                statusbarPush status statusContext text
+                let bytes = hValueUnit (heapHeader heap)
+                    seconds = hSampleUnit (heapHeader heap)
+                let text = format "{}: {} {} at {:.2} {}" (key, dy, bytes, x, seconds)
+                statusbarPush status statusContext (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
                 writeIORef highlightRef (Just key)
                 when (mbPrevKey /= Just key) $

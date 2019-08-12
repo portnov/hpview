@@ -37,6 +37,7 @@ dependencies:
 - data-default-class
 - lens
 - hashable
+- text-format-heavy
 
 executables:
   hpview:
