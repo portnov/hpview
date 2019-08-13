@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Chart where
 
@@ -10,6 +12,8 @@ import Data.Hashable
 import Data.Word
 import Data.Default.Class
 import Graphics.Rendering.Chart
+import Numeric (showEFloat, showFFloat)
+import Formattable.NumFormat
 
 import Types
 import Operations
@@ -43,9 +47,20 @@ makeChart title mbHighlight datas =
         | mbHighlight == Just name = darken 0.1 (fillColor name)
         | otherwise = darken 0.5 (fillColor name)
 
+      yAxis = laxis_generate .~ (autoScaledIntAxis yAxisParams) $ def
+
+      yAxisParams = la_labelf .~ (map showD) $ (defaultIntAxis :: LinearAxisParams Int)
+
   in layout_grid_last .~ True
              $ layout_plots .~ (map (toPlot . mkPlot) datas)
              $ layout_title .~ (T.unpack title)
+             $ layout_y_axis .~ yAxis
 --              $ layout_legend .~ Nothing
              $ def
+
+standard :: NumFormat
+standard = def { _nfThouSep = " " }
+
+showD :: Int -> String
+showD x = T.unpack $ formatNum standard (fromIntegral x)
 

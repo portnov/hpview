@@ -35,6 +35,7 @@ resolver: lts-13.27
 packages:
 - .
 - ../haskell-chart/chart
+- ../formattable
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
