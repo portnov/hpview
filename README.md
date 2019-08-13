@@ -3,7 +3,7 @@ hpview README
 
 `hpview` is a GHC's `.hp` (heap profile) files viewer, implemented in Haskell + Gtk3.
 
-For now, it is does not have much features; it may be nicer than use of hp2pretty because of
+For now, it is does not have much features; it may be nicer than use of [hp2pretty][1] because of
 
 * No need to convert `.hp` to `.svg` and then open `.svg` with another program, just run `hpview file.hp`;
 * Areas on plot are higlighted interactively (on mouse-over), and name of selected area is dislpalyed in the statusbar. Statusbar also displays the timestamp pointed by cursor and amount of memory consumed by highlighted item at that moment.
@@ -12,4 +12,23 @@ For now, it is does not have much features; it may be nicer than use of hp2prett
 Other features may be added later.
 
 ![Screenshot](https://user-images.githubusercontent.com/284644/62966062-af8c9380-be1f-11e9-90c3-177f4be91f18.png)
+
+Installation
+------------
+
+Install it by stack:
+
+```
+$ sudo apt-get install stack
+$ git clone https://github.com/portnov/hpview.git
+$ cd hpview/
+$ stack install
+```
+
+Note: `hpview` currently depends on master branch of [haskell-chart][2] and on
+master branch of [formattable][3] packages; but `stack` will take care of that.
+
+[1]: http://hackage.haskell.org/package/hp2pretty
+[2]: https://github.com/timbod7/haskell-chart
+[3]: https://github.com/portnov/formattable
 
