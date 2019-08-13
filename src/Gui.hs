@@ -19,7 +19,7 @@ import GI.Gdk.Structs
 import GI.Gtk hiding (main)
 import qualified GI.Cairo
 import Graphics.Rendering.Chart as Chart
-import Graphics.Rendering.Cairo
+import Graphics.Rendering.Cairo as Cairo
 import Graphics.Rendering.Chart.Backend.Cairo
 
 import Types
@@ -37,6 +37,7 @@ runWindow heap = do
 
   pickFnRef <- newIORef (const Nothing)
   highlightRef <- newIORef Nothing
+  pointerRef <- newIORef Nothing
   let datas = allSamplesData $ filterHeap 10 (const True) heap
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
 
@@ -46,6 +47,10 @@ runWindow heap = do
           mbHighlight <- liftIO $ readIORef highlightRef
           fn <- drawChart title mbHighlight area datas
           liftIO $ writeIORef pickFnRef fn
+          mbPointer <- liftIO $ readIORef pointerRef
+          case mbPointer of
+            Nothing -> return ()
+            Just ptr -> drawCross area ptr
       return True
 
   widgetAddEvents area [GI.Gdk.EventMaskAllEventsMask]
@@ -71,10 +76,10 @@ runWindow heap = do
                 statusbarPush status statusContext (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
                 writeIORef highlightRef (Just key)
-                when (mbPrevKey /= Just key) $
-                  widgetQueueDraw area
-            _ -> return ()
-        _ -> return ()
+            _ -> statusbarRemoveAll status statusContext
+        _ -> statusbarRemoveAll status statusContext
+      writeIORef pointerRef $ Just (x,y)
+      widgetQueueDraw area
       return True
 
   setContainerChild window vbox
@@ -82,6 +87,21 @@ runWindow heap = do
   -- All Gtk+ applications must run the main event loop. Control ends here and
   -- waits for an event to occur (like a key press or mouse event).
   GI.main
+
+drawCross :: DrawingArea -> (Double, Double) -> Render ()
+drawCross area (xc, yc) = do
+  width <- liftIO $ widgetGetAllocatedWidth area
+  height <- liftIO $ widgetGetAllocatedHeight area
+
+  setDash [8, 2] 0
+  setSourceRGBA 0 0 0 0.5
+  Cairo.moveTo 0 yc
+  Cairo.lineTo (fromIntegral width) yc
+  stroke
+  Cairo.moveTo xc 0
+  Cairo.lineTo xc (fromIntegral height)
+  stroke
+  setDash [] 0
 
 drawChart :: T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> Render (PickFn (LayoutPick Double Int Int))
 drawChart title mbHighlight area datas = do
