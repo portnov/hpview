@@ -34,8 +34,16 @@ resolver: lts-13.27
 #  - wai
 packages:
 - .
-- ../haskell-chart/chart
-- ../formattable
+- location:
+    git: https://github.com/timbod7/haskell-chart
+    commit: 51d94b16f56fffe3464306d568e68e7a63e3b3bb
+    subdirs:
+      - chart
+  extra-dep: true
+- location:
+    git: https://github.com/portnov/formattable
+    commit: 57fbaeb3defd7c8c929695f5e059129937f91283
+  extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
