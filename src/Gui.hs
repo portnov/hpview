@@ -22,6 +22,7 @@ import qualified GI.Cairo
 import Graphics.Rendering.Chart as Chart
 import Graphics.Rendering.Cairo as Cairo
 import Graphics.Rendering.Chart.Backend.Cairo
+import Formattable.NumFormat
 
 import Types
 import Chart
@@ -107,7 +108,7 @@ runWindow heap = do
             Just (key, x, dy) -> do
                 let bytes = hValueUnit (heapHeader heap)
                     seconds = hSampleUnit (heapHeader heap)
-                let text = format "{}: {} {} at {:.2} {}" (key, dy, bytes, x, seconds)
+                let text = format "{}: {} {} at {:.2} {}" (key, formatNum bytesFormat dy, bytes, x, seconds)
                 statusbarPush status statusContext (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
                 writeIORef highlightRef (Just key)

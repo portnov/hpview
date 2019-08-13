@@ -1,8 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module Types where
 
 import qualified Data.Text as T
 import qualified Data.Map as M
+import Data.Default.Class
+import Formattable.NumFormat
 
 data Heap = Heap {
     heapHeader :: ! Header
@@ -45,4 +48,7 @@ data SearchMethod = Contains | Exact | Regexp
 
 data SearchField = Name | Module | Package
   deriving (Eq, Show, Read, Enum, Bounded)
+
+bytesFormat :: NumFormat
+bytesFormat = def { _nfThouSep = " ", _nfPrec = Just (0, Decimals) }
 

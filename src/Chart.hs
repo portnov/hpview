@@ -58,9 +58,6 @@ makeChart title mbHighlight datas =
 --              $ layout_legend .~ Nothing
              $ def
 
-standard :: NumFormat
-standard = def { _nfThouSep = " " }
-
 showD :: Int -> String
-showD x = T.unpack $ formatNum standard (fromIntegral x)
+showD x = T.unpack $ formatNum bytesFormat (fromIntegral x)
 
