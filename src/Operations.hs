@@ -28,7 +28,7 @@ filterHeap :: Int -> (T.Text -> Bool) -> Heap -> Heap
 filterHeap n good heap = heap {heapSamples = map filterSample (heapSamples heap)}
   where
     keys = allKeysSorted heap
-    goodKeys = S.fromList $ filter good $ take n keys
+    goodKeys = S.fromList $ take n $ filter good keys
     filterSample sample = sample {sampleItems = M.filterWithKey isGoodItem (sampleItems sample)}
     isGoodItem key _ = key `S.member` goodKeys
 
