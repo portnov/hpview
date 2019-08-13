@@ -39,3 +39,10 @@ data NameInfo = NameInfo {
   , niName :: T.Text
   }
   deriving (Eq, Show)
+
+data SearchMethod = Contains | Exact | Regexp
+  deriving (Eq, Show, Read, Enum, Bounded)
+
+data SearchField = Name | Module | Package
+  deriving (Eq, Show, Read, Enum, Bounded)
+

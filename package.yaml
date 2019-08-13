@@ -38,6 +38,8 @@ dependencies:
 - lens
 - hashable
 - text-format-heavy
+- regex-tdfa
+- regex-tdfa-text
 
 executables:
   hpview:

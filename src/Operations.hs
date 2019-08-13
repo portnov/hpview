@@ -7,6 +7,8 @@ import Data.List
 import qualified Data.Text as T
 import qualified Data.Set as S
 import qualified Data.Map as M
+import Text.Regex.TDFA
+import Text.Regex.TDFA.Text () -- instances only
 
 import Types
 
@@ -116,4 +118,18 @@ searchKey (plot : plots) x y =
                then Just (y2 - y1)
                else Nothing
         else checkSamples xn (y1, y2) samples x y
+
+checkItem :: SearchField -> SearchMethod -> T.Text -> T.Text -> Bool
+checkItem field method needle name
+  | T.null needle = True
+  | otherwise = 
+      let info = parseName name
+          value = case field of
+                        Name -> niFullName info
+                        Module -> niModule info
+                        Package -> niPackage info
+      in  case method of
+            Contains -> needle `T.isInfixOf` value
+            Exact -> needle == value
+            Regexp -> value =~ needle
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Gui where
 
@@ -38,12 +39,44 @@ runWindow heap = do
   pickFnRef <- newIORef (const Nothing)
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
-  let datas = allSamplesData $ filterHeap 10 (const True) heap
+  let allDatas = allSamplesData $ filterHeap 10 (const True) heap
+  dataRef <- newIORef allDatas
+  
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
+
+  searchHbox <- boxNew OrientationHorizontal 0
+  entry <- searchEntryNew
+  lbl <- labelNew (Just "Max. items:")
+  searchButton <- buttonNewWithLabel "Filter"
+  maxSpin <- spinButtonNewWithRange 0 100 1
+  spinButtonSetValue maxSpin 10
+
+  searchFieldCombo <- mkComboBox [
+                           (Name, "Name")
+                         , (Module, "Module")
+                         , (Package, "Package")
+                       ]
+
+  searchMethodCombo <- mkComboBox [
+                           (Contains, "Contains")
+                         , (Exact, "Exact")
+                         , (Regexp, "Reg.Exp")
+                       ]
+
+  boxPackStart searchHbox searchFieldCombo False False 0
+  boxPackStart searchHbox searchMethodCombo False False 0
+  boxPackStart searchHbox entry True True 0
+  boxPackStart searchHbox lbl False False 10
+  boxPackStart searchHbox maxSpin True True 0
+  boxPackStart searchHbox searchButton False False 0
+
+  on entry #activate $ buttonClicked searchButton
+  on maxSpin #activate $ buttonClicked searchButton
 
   area <- drawingAreaNew
   onWidgetDraw area $ \ctx -> do
       renderWithContext ctx $ do
+          datas <- liftIO $ readIORef dataRef
           mbHighlight <- liftIO $ readIORef highlightRef
           fn <- drawChart title mbHighlight area datas
           liftIO $ writeIORef pickFnRef fn
@@ -56,10 +89,11 @@ runWindow heap = do
   widgetAddEvents area [GI.Gdk.EventMaskAllEventsMask]
 
   vbox <- boxNew OrientationVertical 0
-  boxPackStart vbox area True True 0
-
   status <- statusbarNew
   statusContext <- statusbarGetContextId status "Status"
+
+  boxPackStart vbox searchHbox False False 0
+  boxPackStart vbox area True True 0
   boxPackStart vbox status False False 0
 
   onWidgetMotionNotifyEvent area $ \ev -> do
@@ -68,6 +102,7 @@ runWindow heap = do
       pickFn <- readIORef pickFnRef
       case pickFn (Chart.Point x y) of
         Just (LayoutPick_PlotArea x y _) -> do
+          datas <- readIORef dataRef
           case searchKey datas x y of
             Just (key, x, dy) -> do
                 let bytes = hValueUnit (heapHeader heap)
@@ -81,6 +116,17 @@ runWindow heap = do
       writeIORef pointerRef $ Just (x,y)
       widgetQueueDraw area
       return True
+
+  on searchButton #clicked $ do
+    text <- entryGetText entry
+    Just fieldId <- comboBoxGetActiveId searchFieldCombo
+    let field = read $ T.unpack fieldId
+    Just methodId <- comboBoxGetActiveId searchMethodCombo
+    let method = read $ T.unpack methodId
+    maxN <- spinButtonGetValueAsInt maxSpin
+    let datas = allSamplesData $ filterHeap (fromIntegral maxN) (checkItem field method text) heap
+    writeIORef dataRef datas
+    widgetQueueDraw area
 
   setContainerChild window vbox
   widgetShowAll window
@@ -113,4 +159,13 @@ renderChart :: Chart.Layout Double Int -> (Int32, Int32) -> Render (PickFn (Layo
 renderChart chart (width, height) = do
   let sz = (fromIntegral width, fromIntegral height)
   runBackend (defaultEnv bitmapAlignmentFns) (render (layoutToRenderable chart) sz)
+
+mkComboBox :: (Show a) => [(a, T.Text)] -> IO ComboBoxText
+mkComboBox pairs = do
+  combo <- comboBoxTextNew
+  forM_ pairs $ \(value, title) -> do
+    let id = T.pack (show value)
+    comboBoxTextAppend combo (Just id) title
+  comboBoxSetActive combo 0
+  return combo
 
