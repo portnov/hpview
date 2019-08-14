@@ -29,6 +29,9 @@ import Chart
 import Operations
 import GiCairoBridge
 
+dfltTracePercent :: Int
+dfltTracePercent = 1
+
 runWindow :: Heap -> IO ()
 runWindow heap = do
   GI.init Nothing
@@ -41,17 +44,21 @@ runWindow heap = do
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
   chartSurfaceRef <- newIORef Nothing
-  let allDatas = allSamplesData $ filterHeap 10 (const True) False heap
+  let allDatas = allSamplesData $ filterHeap 10 dfltTracePercent (const True) True heap
   dataRef <- newIORef allDatas
   
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
 
   searchHbox <- boxNew OrientationHorizontal 0
   entry <- searchEntryNew
-  lbl <- labelNew (Just "Max. items:")
+  maxItemsLbl <- labelNew (Just "Max. items:")
   searchButton <- buttonNewWithLabel "Filter"
   maxSpin <- spinButtonNewWithRange 0 100 1
   spinButtonSetValue maxSpin 10
+
+  tracePercentLbl <- labelNew (Just "Trace %:")
+  tracePercentSpin <- spinButtonNewWithRange 1 100 1
+  spinButtonSetValue tracePercentSpin (fromIntegral dfltTracePercent)
 
   searchFieldCombo <- mkComboBox [
                            (Name, "Name")
@@ -66,17 +73,21 @@ runWindow heap = do
                        ]
   
   drawTraceCheckbox <- checkButtonNewWithLabel "Show trace elements"
+  toggleButtonSetActive drawTraceCheckbox True
 
   boxPackStart searchHbox searchFieldCombo False False 0
   boxPackStart searchHbox searchMethodCombo False False 0
   boxPackStart searchHbox entry True True 0
-  boxPackStart searchHbox lbl False False 10
-  boxPackStart searchHbox maxSpin False False 0
+  boxPackStart searchHbox maxItemsLbl False False 10
+  boxPackStart searchHbox maxSpin False False 10
+  boxPackStart searchHbox tracePercentLbl False False 10
+  boxPackStart searchHbox tracePercentSpin False False 0
   boxPackStart searchHbox drawTraceCheckbox False False 0
   boxPackStart searchHbox searchButton False False 0
 
   on entry #activate $ buttonClicked searchButton
   on maxSpin #activate $ buttonClicked searchButton
+  on tracePercentSpin #activate $ buttonClicked searchButton
 
   area <- drawingAreaNew
   onWidgetConfigureEvent area $ \ev -> do
@@ -143,7 +154,8 @@ runWindow heap = do
     let method = read $ T.unpack methodId
     maxN <- spinButtonGetValueAsInt maxSpin
     drawTrace <- toggleButtonGetActive drawTraceCheckbox
-    let datas = allSamplesData $ filterHeap (fromIntegral maxN) (checkItem field method text) drawTrace heap
+    tracePercent <- spinButtonGetValueAsInt tracePercentSpin
+    let datas = allSamplesData $ filterHeap (fromIntegral maxN) (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
     writeIORef dataRef datas
     -- invalidate existing surface, if any
     writeIORef chartSurfaceRef Nothing

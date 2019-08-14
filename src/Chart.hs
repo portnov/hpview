@@ -51,10 +51,13 @@ makeChart title mbHighlight datas =
 
       yAxisParams = la_labelf .~ (map showD) $ (defaultIntAxis :: LinearAxisParams Int)
 
+      legend = legend_orientation .~ LOCols 4 $ def
+
   in layout_grid_last .~ True
              $ layout_plots .~ (map (toPlot . mkPlot) datas)
              $ layout_title .~ (T.unpack title)
              $ layout_y_axis .~ yAxis
+             $ layout_legend .~ Just legend
 --              $ layout_legend .~ Nothing
              $ def
 

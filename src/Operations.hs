@@ -27,12 +27,25 @@ parseName name =
         in  NameInfo pkg name mod local
     _ -> NameInfo global name global name
 
-filterHeap :: Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
-filterHeap n good showTrace heap = heap {heapSamples = map filterSample (heapSamples heap)}
+filterHeap :: Int -> Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
+filterHeap n tracePercent good showTrace heap = heap {heapSamples = map filterSample (heapSamples heap)}
   where
-    keys = allKeysSorted heap
-    goodKeys = S.fromList $ take n $ filter good keys
+    keys = allKeys heap
+    sortedKeys = sortOn (negate . weight) keys
+    goodKeys = S.fromList $ take keysCount $ filter good sortedKeys
     filterSample sample = sample {sampleItems = filterItems (sampleItems sample) }
+
+    weights = M.fromList [(key, calcNameWeight key heap) | key <- keys]
+    weight key = fromMaybe 0 $ M.lookup key weights
+
+    -- Select keys, which in total give at least (100 - tracePercent) of weight
+    totalWeight = sum $ M.elems weights
+    limit = (1 - fromIntegral tracePercent / 100) * fromIntegral totalWeight
+    runningWeights = scanl (+) 0 $ M.elems weights
+    bigKeysCount = length $ takeWhile (< limit) (map fromIntegral runningWeights)
+
+    -- of that, select first N keys
+    keysCount = min bigKeysCount n
 
     filterItems items
       | showTrace =
@@ -49,17 +62,16 @@ allKeys h =
   S.toList $ S.unions [S.fromList (M.keys $ sampleItems sample) | sample <- heapSamples h]
 
 calcNameWeight :: T.Text -> Heap -> Int
-calcNameWeight name h =
-  sum $ catMaybes [M.lookup name (sampleItems sample) | sample <- heapSamples h]
+calcNameWeight name h
+  | name == trace_name = minBound
+  | otherwise = sum $ catMaybes [M.lookup name (sampleItems sample) | sample <- heapSamples h]
 
 allKeysSorted :: Heap -> [T.Text]
 allKeysSorted h = sortOn (negate . weight) keys
   where
     keys = allKeys h
     m = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight key
-      | key == trace_name = minBound
-      | otherwise = fromMaybe 0 $ M.lookup key m
+    weight key = fromMaybe 0 $ M.lookup key m
 
 allSamplesSorted :: Heap -> [Sample [Item]]
 allSamplesSorted h =
@@ -67,9 +79,7 @@ allSamplesSorted h =
   where
     keys = allKeys h
     m = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight (key, _)
-      | key == trace_name = minBound
-      | otherwise = fromMaybe 0 $ M.lookup key m
+    weight (key, _) = fromMaybe 0 $ M.lookup key m
     toItem (key, value) = Item key value
 
 allSamples :: Heap -> [Sample [Item]]
@@ -107,9 +117,7 @@ allSamplesData h = fromMap $ toMap $ concatMap convert sortedSamples
 
     keys = allKeys h
     weights = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight key
-      | key == trace_name = minBound
-      | otherwise = fromMaybe 0 $ M.lookup key weights
+    weight key = fromMaybe 0 $ M.lookup key weights
     toItem (key, value) = Item key value
 
 searchKey :: SamplesData -> Double -> Int -> Maybe (T.Text, Double, Int)
