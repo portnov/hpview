@@ -24,12 +24,21 @@ parseName name =
         in  NameInfo pkg name mod local
     _ -> NameInfo global name global name
 
-filterHeap :: Int -> (T.Text -> Bool) -> Heap -> Heap
-filterHeap n good heap = heap {heapSamples = map filterSample (heapSamples heap)}
+filterHeap :: Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
+filterHeap n good showTrace heap = heap {heapSamples = map filterSample (heapSamples heap)}
   where
     keys = allKeysSorted heap
     goodKeys = S.fromList $ take n $ filter good keys
-    filterSample sample = sample {sampleItems = M.filterWithKey isGoodItem (sampleItems sample)}
+    filterSample sample = sample {sampleItems = filterItems (sampleItems sample) }
+
+    filterItems items
+      | showTrace =
+        let (goodItems, trace) = M.partitionWithKey isGoodItem items
+        in  goodItems `M.union` sumTrace trace
+      | otherwise = M.filterWithKey isGoodItem items
+
+    sumTrace items = M.singleton "(trace elements)" $ sum $ M.elems items
+
     isGoodItem key _ = key `S.member` goodKeys
 
 allKeys :: Heap -> [T.Text]

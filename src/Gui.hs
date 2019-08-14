@@ -41,7 +41,7 @@ runWindow heap = do
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
   chartSurfaceRef <- newIORef Nothing
-  let allDatas = allSamplesData $ filterHeap 10 (const True) heap
+  let allDatas = allSamplesData $ filterHeap 10 (const True) False heap
   dataRef <- newIORef allDatas
   
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
@@ -64,12 +64,15 @@ runWindow heap = do
                          , (Exact, "Exact")
                          , (Regexp, "Reg.Exp")
                        ]
+  
+  drawTraceCheckbox <- checkButtonNewWithLabel "Show trace elements"
 
   boxPackStart searchHbox searchFieldCombo False False 0
   boxPackStart searchHbox searchMethodCombo False False 0
   boxPackStart searchHbox entry True True 0
   boxPackStart searchHbox lbl False False 10
-  boxPackStart searchHbox maxSpin True True 0
+  boxPackStart searchHbox maxSpin False False 0
+  boxPackStart searchHbox drawTraceCheckbox False False 0
   boxPackStart searchHbox searchButton False False 0
 
   on entry #activate $ buttonClicked searchButton
@@ -77,11 +80,8 @@ runWindow heap = do
 
   area <- drawingAreaNew
   onWidgetConfigureEvent area $ \ev -> do
-      datas <- readIORef dataRef
-      mbHighlight <- readIORef highlightRef
-      -- invalidate old surface and draw new chart
-      fn <- drawChartOffscreen chartSurfaceRef title mbHighlight area datas
-      writeIORef pickFnRef fn
+      -- invalidate existing surface, if any
+      writeIORef chartSurfaceRef Nothing
       return False
       
   onWidgetDraw area $ \ctx -> do
@@ -142,8 +142,11 @@ runWindow heap = do
     Just methodId <- comboBoxGetActiveId searchMethodCombo
     let method = read $ T.unpack methodId
     maxN <- spinButtonGetValueAsInt maxSpin
-    let datas = allSamplesData $ filterHeap (fromIntegral maxN) (checkItem field method text) heap
+    drawTrace <- toggleButtonGetActive drawTraceCheckbox
+    let datas = allSamplesData $ filterHeap (fromIntegral maxN) (checkItem field method text) drawTrace heap
     writeIORef dataRef datas
+    -- invalidate existing surface, if any
+    writeIORef chartSurfaceRef Nothing
     widgetQueueDraw area
 
   setContainerChild window vbox
