@@ -27,8 +27,9 @@ parseName name =
         in  NameInfo pkg name mod local
     _ -> NameInfo global name global name
 
-filterHeap :: Int -> Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
-filterHeap n tracePercent good showTrace heap = heap {heapSamples = map filterSample (heapSamples heap)}
+filterHeap :: Int -> TraceStyle -> Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
+filterHeap n traceStyle tracePercent good showTrace heap =
+    heap {heapSamples = map filterSample (heapSamples heap)}
   where
     keys = allKeys heap
     sortedKeys = sortOn (negate . weight) keys
@@ -36,13 +37,21 @@ filterHeap n tracePercent good showTrace heap = heap {heapSamples = map filterSa
     filterSample sample = sample {sampleItems = filterItems (sampleItems sample) }
 
     weights = M.fromList [(key, calcNameWeight key heap) | key <- keys]
+    sortedWeights = map weight sortedKeys
     weight key = fromMaybe 0 $ M.lookup key weights
 
-    -- Select keys, which in total give at least (100 - tracePercent) of weight
+    -- TraceTotal: Select keys, which in total give at least (100 - tracePercent) of weight
     totalWeight = sum $ M.elems weights
-    limit = (1 - fromIntegral tracePercent / 100) * fromIntegral totalWeight
-    runningWeights = scanl (+) 0 $ M.elems weights
-    bigKeysCount = length $ takeWhile (< limit) (map fromIntegral runningWeights)
+    totalLimit = (1 - fromIntegral tracePercent / 100) * fromIntegral totalWeight
+    runningWeights = scanl (+) 0 sortedWeights
+
+    -- TraceEach: Select keys, each of which give more than tracePercent of weight
+    eachLimit = (fromIntegral tracePercent / 100) * fromIntegral totalWeight
+
+    bigKeysCount =
+      case traceStyle of
+        TraceTotal -> length $ takeWhile (< totalLimit) (map fromIntegral runningWeights)
+        TraceEach -> length $ takeWhile (>= eachLimit) (map fromIntegral sortedWeights)
 
     -- of that, select first N keys
     keysCount = min bigKeysCount n

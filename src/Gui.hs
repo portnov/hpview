@@ -44,7 +44,7 @@ runWindow heap = do
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
   chartSurfaceRef <- newIORef Nothing
-  let allDatas = allSamplesData $ filterHeap 10 dfltTracePercent (const True) True heap
+  let allDatas = allSamplesData $ filterHeap 10 TraceTotal dfltTracePercent (const True) True heap
   dataRef <- newIORef allDatas
   
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
@@ -56,7 +56,7 @@ runWindow heap = do
   maxSpin <- spinButtonNewWithRange 0 100 1
   spinButtonSetValue maxSpin 10
 
-  tracePercentLbl <- labelNew (Just "Trace %:")
+  tracePercentLbl <- labelNew (Just "%")
   tracePercentSpin <- spinButtonNewWithRange 1 100 1
   spinButtonSetValue tracePercentSpin (fromIntegral dfltTracePercent)
 
@@ -75,14 +75,20 @@ runWindow heap = do
   drawTraceCheckbox <- checkButtonNewWithLabel "Show trace elements"
   toggleButtonSetActive drawTraceCheckbox True
 
+  traceStyleCombo <- mkComboBox [
+                           (TraceTotal, "All trace elements give in total less than...")
+                         , (TraceEach, "Each trace element gives less than...")
+                       ]
+  
   boxPackStart searchHbox searchFieldCombo False False 0
   boxPackStart searchHbox searchMethodCombo False False 0
   boxPackStart searchHbox entry True True 0
   boxPackStart searchHbox maxItemsLbl False False 10
   boxPackStart searchHbox maxSpin False False 10
-  boxPackStart searchHbox tracePercentLbl False False 10
+  boxPackStart searchHbox traceStyleCombo False False 0
   boxPackStart searchHbox tracePercentSpin False False 0
-  boxPackStart searchHbox drawTraceCheckbox False False 0
+  boxPackStart searchHbox tracePercentLbl False False 0
+  boxPackStart searchHbox drawTraceCheckbox False False 10
   boxPackStart searchHbox searchButton False False 0
 
   on entry #activate $ buttonClicked searchButton
@@ -155,7 +161,9 @@ runWindow heap = do
     maxN <- spinButtonGetValueAsInt maxSpin
     drawTrace <- toggleButtonGetActive drawTraceCheckbox
     tracePercent <- spinButtonGetValueAsInt tracePercentSpin
-    let datas = allSamplesData $ filterHeap (fromIntegral maxN) (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
+    Just traceStyleId <- comboBoxGetActiveId traceStyleCombo
+    let traceStyle = read $ T.unpack traceStyleId
+    let datas = allSamplesData $ filterHeap (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
     writeIORef dataRef datas
     -- invalidate existing surface, if any
     writeIORef chartSurfaceRef Nothing

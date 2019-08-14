@@ -49,6 +49,9 @@ data SearchMethod = Contains | Exact | Regexp
 data SearchField = Name | Module | Package
   deriving (Eq, Show, Read, Enum, Bounded)
 
+data TraceStyle = TraceTotal | TraceEach
+  deriving (Eq, Show, Read, Enum, Bounded)
+
 bytesFormat :: NumFormat
 bytesFormat = def { _nfThouSep = " ", _nfPrec = Just (0, Decimals) }
 
