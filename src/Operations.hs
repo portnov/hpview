@@ -15,6 +15,9 @@ import Types
 global :: T.Text
 global = "GLOBAL"
 
+trace_name :: T.Text
+trace_name = "(trace elements)"
+
 parseName :: T.Text -> NameInfo
 parseName name =
   case T.split (== ':') name of
@@ -37,7 +40,7 @@ filterHeap n good showTrace heap = heap {heapSamples = map filterSample (heapSam
         in  goodItems `M.union` sumTrace trace
       | otherwise = M.filterWithKey isGoodItem items
 
-    sumTrace items = M.singleton "(trace elements)" $ sum $ M.elems items
+    sumTrace items = M.singleton trace_name $ sum $ M.elems items
 
     isGoodItem key _ = key `S.member` goodKeys
 
@@ -54,7 +57,9 @@ allKeysSorted h = sortOn (negate . weight) keys
   where
     keys = allKeys h
     m = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight key = fromMaybe 0 $ M.lookup key m
+    weight key
+      | key == trace_name = minBound
+      | otherwise = fromMaybe 0 $ M.lookup key m
 
 allSamplesSorted :: Heap -> [Sample [Item]]
 allSamplesSorted h =
@@ -62,7 +67,9 @@ allSamplesSorted h =
   where
     keys = allKeys h
     m = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight (key, _) = fromMaybe 0 $ M.lookup key m
+    weight (key, _)
+      | key == trace_name = minBound
+      | otherwise = fromMaybe 0 $ M.lookup key m
     toItem (key, value) = Item key value
 
 allSamples :: Heap -> [Sample [Item]]
@@ -100,7 +107,9 @@ allSamplesData h = fromMap $ toMap $ concatMap convert sortedSamples
 
     keys = allKeys h
     weights = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight key = fromMaybe 0 $ M.lookup key weights
+    weight key
+      | key == trace_name = minBound
+      | otherwise = fromMaybe 0 $ M.lookup key weights
     toItem (key, value) = Item key value
 
 searchKey :: SamplesData -> Double -> Int -> Maybe (T.Text, Double, Int)
