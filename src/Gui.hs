@@ -40,6 +40,7 @@ runWindow heap = do
   pickFnRef <- newIORef (const Nothing)
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
+  chartSurfaceRef <- newIORef Nothing
   let allDatas = allSamplesData $ filterHeap 10 (const True) heap
   dataRef <- newIORef allDatas
   
@@ -75,12 +76,25 @@ runWindow heap = do
   on maxSpin #activate $ buttonClicked searchButton
 
   area <- drawingAreaNew
+  onWidgetConfigureEvent area $ \ev -> do
+      datas <- readIORef dataRef
+      mbHighlight <- readIORef highlightRef
+      -- invalidate old surface and draw new chart
+      fn <- drawChartOffscreen chartSurfaceRef title mbHighlight area datas
+      writeIORef pickFnRef fn
+      return False
+      
   onWidgetDraw area $ \ctx -> do
       renderWithContext ctx $ do
           datas <- liftIO $ readIORef dataRef
           mbHighlight <- liftIO $ readIORef highlightRef
-          fn <- drawChart title mbHighlight area datas
-          liftIO $ writeIORef pickFnRef fn
+
+          -- Get previously prepared (off-screen) Surface with already drawn chart or draw a new one
+          chartSurface <- liftIO $ getChartSurface pickFnRef chartSurfaceRef title mbHighlight area datas
+          -- Paint that surface onto the widget
+          setSourceSurface chartSurface 0 0
+          paint
+
           mbPointer <- liftIO $ readIORef pointerRef
           case mbPointer of
             Nothing -> return ()
@@ -111,7 +125,10 @@ runWindow heap = do
                 let text = format "{}: {} {} at {:.2} {}" (key, formatNum bytesFormat dy, bytes, x, seconds)
                 statusbarPush status statusContext (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
-                writeIORef highlightRef (Just key)
+                when (mbPrevKey /= Just key) $ do
+                  pickFn' <- drawChartOffscreen chartSurfaceRef title (Just key) area datas
+                  writeIORef pickFnRef pickFn'
+                  writeIORef highlightRef (Just key)
             _ -> statusbarRemoveAll status statusContext
         _ -> statusbarRemoveAll status statusContext
       writeIORef pointerRef $ Just (x,y)
@@ -150,6 +167,43 @@ drawCross area (xc, yc) = do
   stroke
   setDash [] 0
 
+getChartSurface :: IORef (PickFn (LayoutPick Double Int Int)) -> IORef (Maybe Surface) ->  T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO Surface
+getChartSurface fnRef surfaceRef title mbHighlight area datas = do
+    mbSurface <- readIORef surfaceRef
+    case mbSurface of
+      Nothing -> do
+        fn <- drawChartOffscreen surfaceRef title mbHighlight area datas
+        writeIORef fnRef fn
+        Just surface <- readIORef surfaceRef
+        return surface
+      Just surface -> return surface
+
+drawChartOffscreen :: IORef (Maybe Surface) -> T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO (PickFn (LayoutPick Double Int Int))
+drawChartOffscreen surfaceRef title mbHighlight area datas = do
+      surface <- recreateSurface 
+      fn <- renderWith surface $ drawChart title mbHighlight area datas
+      surfaceFlush surface
+      -- print "chart drawn"
+      return fn
+  where
+    recreateSurface = do
+      mbSurface <- readIORef surfaceRef
+      case mbSurface of
+        Just oldSurface -> do
+          surfaceFinish oldSurface
+          surface <- createSurface
+          writeIORef surfaceRef (Just surface)
+          return surface
+        Nothing -> do
+          surface <- createSurface
+          writeIORef surfaceRef (Just surface)
+          return surface
+
+    createSurface = do
+      width <- widgetGetAllocatedWidth area
+      height <- widgetGetAllocatedHeight area
+      createImageSurface FormatARGB32 (fromIntegral width) (fromIntegral height)
+      
 drawChart :: T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> Render (PickFn (LayoutPick Double Int Int))
 drawChart title mbHighlight area datas = do
   width <- liftIO $ widgetGetAllocatedWidth area
