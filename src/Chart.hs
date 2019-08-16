@@ -28,9 +28,13 @@ nameColor name =
       hslColor = hsl hue 0.5 v
   in  sRGB (channelRed hslColor) (channelGreen hslColor) (channelBlue hslColor)
 
-makeChart :: T.Text -> Maybe T.Text -> SamplesData -> Layout Double Int
-makeChart title mbHighlight datas =
-  let mkPlot (name, samples) =
+makeChart :: ChartData -> Layout Double Int
+makeChart chart =
+  let title = chtTitle chart
+      mbHighlight = chtHighlgiht chart
+      datas = chtSamples chart
+
+      mkPlot (name, samples) =
           plot_fillbetween_style .~ solidFillStyle (fillColor name)
           $ plot_fillbetween_line .~ Just (solidLine (lineWidth name) (lineColor name))
           $ plot_fillbetween_title .~ (T.unpack $ niFullName $ parseName name)
@@ -51,13 +55,16 @@ makeChart title mbHighlight datas =
 
       yAxisParams = la_labelf .~ (map showD) $ (defaultIntAxis :: LinearAxisParams Int)
 
-      legend = legend_orientation .~ LOCols 4 $ def
+      legend =
+        if chtLegend chart
+          then Just $ legend_orientation .~ LOCols 4 $ def
+          else Nothing
 
   in layout_grid_last .~ True
              $ layout_plots .~ (map (toPlot . mkPlot) datas)
              $ layout_title .~ (T.unpack title)
              $ layout_y_axis .~ yAxis
-             $ layout_legend .~ Just legend
+             $ layout_legend .~ legend
 --              $ layout_legend .~ Nothing
              $ def
 

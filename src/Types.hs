@@ -55,3 +55,18 @@ data TraceStyle = TraceTotal | TraceEach
 bytesFormat :: NumFormat
 bytesFormat = def { _nfThouSep = " ", _nfPrec = Just (0, Decimals) }
 
+data Config = Config {
+      cfgShowLegend :: Bool
+    , cfgHighlight :: Bool
+  }
+  deriving (Eq, Show)
+
+type SamplesData = [(T.Text, [(Double, (Int, Int))])]
+
+data ChartData = ChartData {
+      chtTitle :: T.Text
+    , chtHighlgiht :: Maybe T.Text
+    , chtLegend :: Bool
+    , chtSamples :: SamplesData
+  }
+

@@ -97,8 +97,6 @@ allSamples h =
   where
     toItem (key, value) = Item key value
 
-type SamplesData = [(T.Text, [(Double, (Int, Int))])]
-
 allSamplesData :: Heap -> SamplesData
 allSamplesData h = fromMap $ toMap $ concatMap convert sortedSamples
   where

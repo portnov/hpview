@@ -24,7 +24,11 @@ dependencies:
 - containers
 - mtl
 - text
+- aeson
+- yaml
 - attoparsec
+- filepath
+- directory
 - haskell-gi-base
 - gi-gdk
 - gi-gtk

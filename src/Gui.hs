@@ -27,6 +27,8 @@ import Formattable.NumFormat
 
 import Types
 import Chart
+import Config
+import SettingsDlg
 import Operations
 import GiCairoBridge
 
@@ -38,6 +40,8 @@ type ChartCache = M.Map (Maybe T.Text) (Surface, LayoutPickFn)
 
 runWindow :: Heap -> IO ()
 runWindow heap = do
+  initCfg <- loadConfig
+
   GI.init Nothing
   -- Create a new window
   window <- windowNew WindowTypeToplevel
@@ -49,6 +53,7 @@ runWindow heap = do
   chartSurfaceRef <- newIORef M.empty
   let allDatas = allSamplesData $ filterHeap 10 TraceTotal dfltTracePercent (const True) True heap
   dataRef <- newIORef allDatas
+  cfgRef <- newIORef initCfg
   
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
 
@@ -110,7 +115,10 @@ runWindow heap = do
           mbHighlight <- liftIO $ readIORef highlightRef
 
           -- Get previously prepared (off-screen) Surface with already drawn chart or draw a new one
-          (chartSurface, _) <- liftIO $ getChartSurface chartSurfaceRef title mbHighlight area datas
+          -- (or draw a new one if there is no one prepared)
+          showLegend <- liftIO $ askConfig cfgShowLegend cfgRef
+          let chart = ChartData title mbHighlight showLegend datas
+          (chartSurface, _) <- liftIO $ getChartSurface chartSurfaceRef chart area
           -- Paint that surface onto the widget
           setSourceSurface chartSurface 0 0
           paint
@@ -124,18 +132,33 @@ runWindow heap = do
   widgetAddEvents area [GI.Gdk.EventMaskAllEventsMask]
 
   vbox <- boxNew OrientationVertical 0
-  status <- statusbarNew
-  statusContext <- statusbarGetContextId status "Status"
+  status <- labelNew (Just "Ready.")
+  labelSetXalign status 0
+  statusBox <- boxNew OrientationHorizontal 0
+  setWidgetMargin status 5
+  -- setContainerBorderWidth statusBox 10
+
+  settingsBtn <- buttonNewFromIconName (Just "preferences-system") $ fromIntegral (fromEnum IconSizeMenu)
+  onButtonClicked settingsBtn $ do
+      ok <- showSettingsDlg window cfgRef
+      when ok $
+        -- invalidate existing surface, if any
+        writeIORef chartSurfaceRef M.empty
+
+  boxPackStart statusBox status True True 0
+  boxPackStart statusBox settingsBtn False False 0
 
   boxPackStart vbox searchHbox False False 0
   boxPackStart vbox area True True 0
-  boxPackStart vbox status False False 0
+  boxPackStart vbox statusBox False False 0
 
   onWidgetMotionNotifyEvent area $ \ev -> do
       x <- getEventMotionX ev
       y <- getEventMotionY ev
       datas <- readIORef dataRef
-      (_, pickFn) <- getChartSurface chartSurfaceRef title Nothing area datas
+      showLegend <- askConfig cfgShowLegend cfgRef
+      let chart = ChartData title Nothing showLegend datas
+      (_, pickFn) <- getChartSurface chartSurfaceRef chart area
       case pickFn (Chart.Point x y) of
         Just (LayoutPick_PlotArea x y _) -> do
           case searchKey datas x y of
@@ -143,13 +166,14 @@ runWindow heap = do
                 let bytes = hValueUnit (heapHeader heap)
                     seconds = hSampleUnit (heapHeader heap)
                 let text = format "{}: {} {} at {:.2} {}" (key, formatNum bytesFormat dy, bytes, x, seconds)
-                statusbarPush status statusContext (TL.toStrict text)
+                labelSetText status (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
-                when (mbPrevKey /= Just key) $ do
-                  -- drawChartOffscreen chartSurfaceRef title (Just key) area datas
-                  writeIORef highlightRef (Just key)
-            _ -> statusbarRemoveAll status statusContext
-        _ -> statusbarRemoveAll status statusContext
+                doHighlight <- askConfig cfgHighlight cfgRef
+                when doHighlight $
+                  when (mbPrevKey /= Just key) $ do
+                    writeIORef highlightRef (Just key)
+            _ -> labelSetText status ""
+        _ -> labelSetText status ""
       writeIORef pointerRef $ Just (x,y)
       widgetQueueDraw area
       return True
@@ -192,32 +216,32 @@ drawCross area (xc, yc) = do
   stroke
   setDash [] 0
 
-getChartSurface :: IORef ChartCache ->  T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO (Surface, LayoutPickFn)
-getChartSurface surfaceRef title mbHighlight area datas = do
+getChartSurface :: IORef ChartCache -> ChartData -> DrawingArea -> IO (Surface, LayoutPickFn)
+getChartSurface surfaceRef chart area = do
     cache <- readIORef surfaceRef
-    case M.lookup mbHighlight cache of
+    case M.lookup (chtHighlgiht chart) cache of
       Nothing -> do
         -- this should only be executed in case when onWidgetDraw is called first time
         -- for this mbHighlight after cache is invalidated
-        (surface, fn) <- drawChartOffscreen surfaceRef title mbHighlight area datas
-        writeIORef surfaceRef $ M.insert mbHighlight (surface, fn) cache
+        (surface, fn) <- drawChartOffscreen surfaceRef chart area
+        writeIORef surfaceRef $ M.insert (chtHighlgiht chart) (surface, fn) cache
         return (surface, fn)
 
       Just (surface, fn) -> return (surface, fn)
 
-drawChartOffscreen :: IORef ChartCache -> T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO (Surface, LayoutPickFn)
-drawChartOffscreen surfaceRef title mbHighlight area datas = do
+drawChartOffscreen :: IORef ChartCache -> ChartData -> DrawingArea -> IO (Surface, LayoutPickFn)
+drawChartOffscreen surfaceRef chart area = do
       surface <- recreateSurface 
-      fn <- renderWith surface $ drawChart title mbHighlight area datas
+      fn <- renderWith surface $ drawChart chart area
       surfaceFlush surface
       cache <- readIORef surfaceRef
-      writeIORef surfaceRef $ M.insert mbHighlight (surface, fn) cache
+      writeIORef surfaceRef $ M.insert (chtHighlgiht chart) (surface, fn) cache
       -- putStrLn $ "chart drawn: " ++ show mbHighlight
       return (surface, fn)
   where
     recreateSurface = do
       cache <- readIORef surfaceRef
-      case M.lookup mbHighlight cache of
+      case M.lookup (chtHighlgiht chart) cache of
         Just (oldSurface, _) -> return oldSurface
         Nothing -> createSurface
 
@@ -226,11 +250,11 @@ drawChartOffscreen surfaceRef title mbHighlight area datas = do
       height <- widgetGetAllocatedHeight area
       createImageSurface FormatARGB32 (fromIntegral width) (fromIntegral height)
       
-drawChart :: T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> Render (PickFn (LayoutPick Double Int Int))
-drawChart title mbHighlight area datas = do
+drawChart :: ChartData -> DrawingArea -> Render (PickFn (LayoutPick Double Int Int))
+drawChart chart area = do
   width <- liftIO $ widgetGetAllocatedWidth area
   height <- liftIO $ widgetGetAllocatedHeight area
-  renderChart (makeChart title mbHighlight datas) (width, height)
+  renderChart (makeChart chart) (width, height)
 
 renderChart :: Chart.Layout Double Int -> (Int32, Int32) -> Render (PickFn (LayoutPick Double Int Int))
 renderChart chart (width, height) = do
