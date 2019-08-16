@@ -3,15 +3,34 @@ hpview README
 
 `hpview` is a GHC's `.hp` (heap profile) files viewer, implemented in Haskell + Gtk3.
 
-For now, it is does not have much features; it may be nicer than use of [hp2pretty][1] because of
+It may be nicer than use of [hp2pretty][1] because of the follwing features:
 
-* No need to convert `.hp` to `.svg` and then open `.svg` with another program, just run `hpview file.hp`;
-* Areas on plot are higlighted interactively (on mouse-over), and name of selected area is dislpalyed in the statusbar. Statusbar also displays the timestamp pointed by cursor and amount of memory consumed by highlighted item at that moment.
-* Some interactive filtering features. You may interactively change number of items to display (by default only 10 largest items are shown) and filter them by name, or module, or package name.
+* No need to convert `.hp` to `.svg` and then open `.svg` with another program,
+  just run `hpview file.hp`.
+* Areas on plot are higlighted interactively (on mouse-over), and name of
+  selected area is dislpalyed in the statusbar. Statusbar also displays the
+  timestamp pointed by cursor and amount of memory consumed by highlighted item
+  at that moment.
+* Interactive filtering by item name, module or package name (module and
+  package filtering works for `-hc` mode; for all other modes, only name
+  filtering is useful).
+* Displaying of "trace elements", i.e. items that occupy very small amounts of
+  memory. Such items are merged into one band called `(trace elements)`, as
+  `hp2pretty` does. There are several options for such elements:
+  * To show or not to show trace elements at all
+  * Number of biggest items to show (10 by default)
+  * Two modes of trace elements detection:
+    * either select items that occupy less than N percents of memory in total, or
+    * select items, each of which occupies less than N percents of memory.
+  * Percentage of memory for trace elements is configurable.
+* Legend may be enabled (by default) or disabled in preferences dialog;
+  preferences dialog is called with a button in right bottom corner of the
+  window.
+* Highlighting of the area under mouse cursor may be disabled in preferences dialog.
 
 Other features may be added later.
 
-![Screenshot](https://user-images.githubusercontent.com/284644/62966062-af8c9380-be1f-11e9-90c3-177f4be91f18.png)
+![Screenshot](https://user-images.githubusercontent.com/284644/63179678-1e5b2e00-c066-11e9-983b-a29292f6189b.png)
 
 Installation
 ------------
