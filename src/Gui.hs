@@ -11,6 +11,7 @@ import Data.Colour.SRGB
 import Data.Colour.Names
 import Data.Int
 import Data.IORef
+import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Text.Format.Heavy (format)
@@ -32,6 +33,9 @@ import GiCairoBridge
 dfltTracePercent :: Int
 dfltTracePercent = 1
 
+type LayoutPickFn = PickFn (LayoutPick Double Int Int)
+type ChartCache = M.Map (Maybe T.Text) (Surface, LayoutPickFn)
+
 runWindow :: Heap -> IO ()
 runWindow heap = do
   GI.init Nothing
@@ -40,10 +44,9 @@ runWindow heap = do
   -- Here we connect the "destroy" event to a signal handler.
   onWidgetDestroy window mainQuit
 
-  pickFnRef <- newIORef (const Nothing)
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
-  chartSurfaceRef <- newIORef Nothing
+  chartSurfaceRef <- newIORef M.empty
   let allDatas = allSamplesData $ filterHeap 10 TraceTotal dfltTracePercent (const True) True heap
   dataRef <- newIORef allDatas
   
@@ -98,7 +101,7 @@ runWindow heap = do
   area <- drawingAreaNew
   onWidgetConfigureEvent area $ \ev -> do
       -- invalidate existing surface, if any
-      writeIORef chartSurfaceRef Nothing
+      writeIORef chartSurfaceRef M.empty
       return False
       
   onWidgetDraw area $ \ctx -> do
@@ -107,7 +110,7 @@ runWindow heap = do
           mbHighlight <- liftIO $ readIORef highlightRef
 
           -- Get previously prepared (off-screen) Surface with already drawn chart or draw a new one
-          chartSurface <- liftIO $ getChartSurface pickFnRef chartSurfaceRef title mbHighlight area datas
+          (chartSurface, _) <- liftIO $ getChartSurface chartSurfaceRef title mbHighlight area datas
           -- Paint that surface onto the widget
           setSourceSurface chartSurface 0 0
           paint
@@ -131,10 +134,10 @@ runWindow heap = do
   onWidgetMotionNotifyEvent area $ \ev -> do
       x <- getEventMotionX ev
       y <- getEventMotionY ev
-      pickFn <- readIORef pickFnRef
+      datas <- readIORef dataRef
+      (_, pickFn) <- getChartSurface chartSurfaceRef title Nothing area datas
       case pickFn (Chart.Point x y) of
         Just (LayoutPick_PlotArea x y _) -> do
-          datas <- readIORef dataRef
           case searchKey datas x y of
             Just (key, x, dy) -> do
                 let bytes = hValueUnit (heapHeader heap)
@@ -143,8 +146,7 @@ runWindow heap = do
                 statusbarPush status statusContext (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
                 when (mbPrevKey /= Just key) $ do
-                  pickFn' <- drawChartOffscreen chartSurfaceRef title (Just key) area datas
-                  writeIORef pickFnRef pickFn'
+                  -- drawChartOffscreen chartSurfaceRef title (Just key) area datas
                   writeIORef highlightRef (Just key)
             _ -> statusbarRemoveAll status statusContext
         _ -> statusbarRemoveAll status statusContext
@@ -166,7 +168,7 @@ runWindow heap = do
     let datas = allSamplesData $ filterHeap (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
     writeIORef dataRef datas
     -- invalidate existing surface, if any
-    writeIORef chartSurfaceRef Nothing
+    writeIORef chartSurfaceRef M.empty
     widgetQueueDraw area
 
   setContainerChild window vbox
@@ -190,37 +192,34 @@ drawCross area (xc, yc) = do
   stroke
   setDash [] 0
 
-getChartSurface :: IORef (PickFn (LayoutPick Double Int Int)) -> IORef (Maybe Surface) ->  T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO Surface
-getChartSurface fnRef surfaceRef title mbHighlight area datas = do
-    mbSurface <- readIORef surfaceRef
-    case mbSurface of
+getChartSurface :: IORef ChartCache ->  T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO (Surface, LayoutPickFn)
+getChartSurface surfaceRef title mbHighlight area datas = do
+    cache <- readIORef surfaceRef
+    case M.lookup mbHighlight cache of
       Nothing -> do
-        fn <- drawChartOffscreen surfaceRef title mbHighlight area datas
-        writeIORef fnRef fn
-        Just surface <- readIORef surfaceRef
-        return surface
-      Just surface -> return surface
+        -- this should only be executed in case when onWidgetDraw is called first time
+        -- for this mbHighlight after cache is invalidated
+        (surface, fn) <- drawChartOffscreen surfaceRef title mbHighlight area datas
+        writeIORef surfaceRef $ M.insert mbHighlight (surface, fn) cache
+        return (surface, fn)
 
-drawChartOffscreen :: IORef (Maybe Surface) -> T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO (PickFn (LayoutPick Double Int Int))
+      Just (surface, fn) -> return (surface, fn)
+
+drawChartOffscreen :: IORef ChartCache -> T.Text -> Maybe T.Text -> DrawingArea -> SamplesData -> IO (Surface, LayoutPickFn)
 drawChartOffscreen surfaceRef title mbHighlight area datas = do
       surface <- recreateSurface 
       fn <- renderWith surface $ drawChart title mbHighlight area datas
       surfaceFlush surface
-      -- print "chart drawn"
-      return fn
+      cache <- readIORef surfaceRef
+      writeIORef surfaceRef $ M.insert mbHighlight (surface, fn) cache
+      -- putStrLn $ "chart drawn: " ++ show mbHighlight
+      return (surface, fn)
   where
     recreateSurface = do
-      mbSurface <- readIORef surfaceRef
-      case mbSurface of
-        Just oldSurface -> do
-          surfaceFinish oldSurface
-          surface <- createSurface
-          writeIORef surfaceRef (Just surface)
-          return surface
-        Nothing -> do
-          surface <- createSurface
-          writeIORef surfaceRef (Just surface)
-          return surface
+      cache <- readIORef surfaceRef
+      case M.lookup mbHighlight cache of
+        Just (oldSurface, _) -> return oldSurface
+        Nothing -> createSurface
 
     createSurface = do
       width <- widgetGetAllocatedWidth area
