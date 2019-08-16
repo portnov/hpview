@@ -36,7 +36,6 @@ executable hpview
       Gui
       Operations
       Parser
-      Prices
       SettingsDlg
       Types
       Paths_hpview
