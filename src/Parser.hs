@@ -40,16 +40,30 @@ pItem = do
   endOfLine
   return (nameT, value)
 
+-- for some reason, Haskell programs sometimes use
+-- comma as decimal separator instead of dot.
+-- TODO: this is not a very effective parser :/
+pDouble :: Parser Double
+pDouble = doubleComma <|> double
+  where
+    doubleComma = do
+      int <- decimal
+      char ','
+      zeros <- many $ char '0'
+      mantis <- decimal
+      let n = length zeros + length (show mantis)
+      return $ fromIntegral int + fromIntegral mantis / 10^n
+
 pSample :: Parser (Sample ItemsMap)
 pSample = do
   string "BEGIN_SAMPLE"
   space
-  time <- double
+  time <- pDouble
   endOfLine
   items <- many pItem
   string "END_SAMPLE"
   space
-  time1 <- double
+  time1 <- pDouble
   guard $ time1 == time
   endOfLine
   return $ Sample time (M.fromList items)
