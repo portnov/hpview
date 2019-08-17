@@ -40,6 +40,12 @@ Other features may be added later.
 
 ![Screenshot](https://user-images.githubusercontent.com/284644/63210503-94b06c80-c108-11e9-95a3-0e503121bc17.png)
 
+Performance: it takes about 40 seconds to display a `.hp` file of 181 Mb in
+size on my machine (i5 2.8GHz), from start to displayed chart. In my practice,
+usually smaller files give even more insight into what's going on than bigger
+ones; so I am not going to invest a lot of time into this matter. But PRs are
+welcome.
+
 Installation
 ------------
 
