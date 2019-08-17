@@ -10,6 +10,7 @@ import Formattable.NumFormat
 data Heap = Heap {
     heapHeader :: ! Header
   , heapSamples :: ! [Sample ItemsMap]
+  , heapWeights :: M.Map T.Text Int
   }
   deriving (Eq, Show)
 

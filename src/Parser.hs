@@ -7,10 +7,13 @@ import Control.Monad.State
 import Control.Applicative
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Read as TR
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Data.Attoparsec.Text
 
 import Types
+import Operations (calcNameWeight)
 
 data ParserState = ParserState {
     psHeader :: Header
@@ -39,7 +42,10 @@ parseHeap :: T.Text -> Heap
 parseHeap text =
     let st = execState runParser initState
         runParser = forM_ (T.lines text) parseLine
-    in  Heap (psHeader st) (reverse $ psSamples st)
+        samples = reverse $ psSamples st
+        weights = M.unionsWith (+) $ map sampleItems $ psSamples st
+        heap = Heap (psHeader st) samples weights
+    in  heap
 
 processLine :: LineData -> State ParserState ()
 processLine (JOB job) = modify $ \st -> st {psHeader = (psHeader st) {hJob = job}}
@@ -98,9 +104,9 @@ parseItem line = do
   let (name, rest) = T.break (== '\t') line
   if T.null rest
     then fail $ "Can't parse data line: " ++ show line
-    else case parseOnly (decimal <* endOfInput) (T.tail rest) of
+    else case TR.decimal (T.tail rest) of
            Left err -> fail $ "can't parse decimal: " ++ show rest ++ ": " ++ err
-           Right value -> return (name, value)
+           Right (value, "") -> return (name, value)
     
 pHeaderLine :: Parser LineData
 pHeaderLine =

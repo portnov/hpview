@@ -31,12 +31,12 @@ filterHeap :: Int -> TraceStyle -> Int -> (T.Text -> Bool) -> Bool -> Heap -> He
 filterHeap n traceStyle tracePercent good showTrace heap =
     heap {heapSamples = map filterSample (heapSamples heap)}
   where
-    keys = allKeys heap
+    keys = M.keys $ heapWeights heap
     sortedKeys = sortOn (negate . weight) keys
     goodKeys = S.fromList $ take keysCount $ filter good sortedKeys
     filterSample sample = sample {sampleItems = filterItems (sampleItems sample) }
 
-    weights = M.fromList [(key, calcNameWeight key heap) | key <- keys]
+    weights = heapWeights heap
     sortedWeights = map weight sortedKeys
     weight key = fromMaybe 0 $ M.lookup key weights
 
@@ -79,16 +79,14 @@ allKeysSorted :: Heap -> [T.Text]
 allKeysSorted h = sortOn (negate . weight) keys
   where
     keys = allKeys h
-    m = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight key = fromMaybe 0 $ M.lookup key m
+    weight key = fromMaybe 0 $ M.lookup key (heapWeights h)
 
 allSamplesSorted :: Heap -> [Sample [Item]]
 allSamplesSorted h =
     [Sample time (map toItem $ sortOn (negate . weight) (M.assocs items)) | Sample time items <- heapSamples h]
   where
     keys = allKeys h
-    m = M.fromList [(key, calcNameWeight key h) | key <- keys]
-    weight (key, _) = fromMaybe 0 $ M.lookup key m
+    weight (key, _) = fromMaybe 0 $ M.lookup key (heapWeights h)
     toItem (key, value) = Item key value
 
 allSamples :: Heap -> [Sample [Item]]
@@ -123,7 +121,7 @@ allSamplesData h = fromMap $ toMap $ concatMap convert sortedSamples
       in  M.assocs items ++ [(key, 0) | key <- otherKeys]
 
     keys = allKeys h
-    weights = M.fromList [(key, calcNameWeight key h) | key <- keys]
+    weights = heapWeights h
     weight key = fromMaybe 0 $ M.lookup key weights
     toItem (key, value) = Item key value
 
