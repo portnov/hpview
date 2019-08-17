@@ -54,6 +54,9 @@ runWindow heap = do
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
   chartSurfaceRef <- newIORef M.empty
+
+  let invalidateChart = writeIORef chartSurfaceRef M.empty
+
   let allDatas = allSamplesData $ filterHeap Nothing 10 TraceTotal dfltTracePercent (const True) True heap
   dataRef <- newIORef allDatas
   cfgRef <- newIORef initCfg
@@ -112,8 +115,7 @@ runWindow heap = do
 
   area <- drawingAreaNew
   onWidgetConfigureEvent area $ \ev -> do
-      -- invalidate existing surface, if any
-      writeIORef chartSurfaceRef M.empty
+      invalidateChart
       return False
 
   onWidgetButtonPressEvent area $ \ev -> do
@@ -229,8 +231,7 @@ runWindow heap = do
   onButtonClicked settingsBtn $ do
       ok <- showSettingsDlg window cfgRef
       when ok $
-        -- invalidate existing surface, if any
-        writeIORef chartSurfaceRef M.empty
+        invalidateChart
 
   boxPackStart statusBox status True True 0
   boxPackStart statusBox zoomInBtn False False 0
@@ -285,8 +286,7 @@ runWindow heap = do
                            (fltr : _) -> Just fltr
       let datas = allSamplesData $ filterHeap mbTimeFilter (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
       writeIORef dataRef datas
-      -- invalidate existing surface, if any
-      writeIORef chartSurfaceRef M.empty
+      invalidateChart
       widgetQueueDraw area
 
   setContainerChild window vbox
