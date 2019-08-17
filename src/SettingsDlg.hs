@@ -7,6 +7,7 @@ import Control.Monad
 import Data.Default.Class
 import Data.Int
 import Data.IORef
+import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -30,14 +31,25 @@ showSettingsDlg win cfgRef = do
 
     showLegendCheckbox <- checkButtonNewWithLabel "Show legend"
     highlightCheckbox <- checkButtonNewWithLabel "Highlight area under pointer"
+    useSamplesCheckbox <- checkButtonNewWithLabel "Use downsampling"
+
+    samplesBox <- boxNew OrientationHorizontal 10
+    samplesLbl <- labelNew (Just "Samples count:")
+    samplesSpin <- spinButtonNewWithRange 100 10000 1
+    boxPackStart samplesBox samplesLbl True True 10
+    boxPackStart samplesBox samplesSpin False False 0
 
     cfg <- readIORef cfgRef
     toggleButtonSetActive showLegendCheckbox (cfgShowLegend cfg)
     toggleButtonSetActive highlightCheckbox (cfgHighlight cfg)
+    toggleButtonSetActive useSamplesCheckbox (isJust $ cfgSamplesNr cfg)
+    spinButtonSetValue samplesSpin $ fromIntegral $ fromMaybe 500 (cfgSamplesNr cfg)
 
     setContainerBorderWidth area 10
     boxPackStart area showLegendCheckbox False False 0
     boxPackStart area highlightCheckbox False False 0
+    boxPackStart area useSamplesCheckbox False False 0
+    boxPackStart area samplesBox False False 0
     widgetShowAll dlg
 
     response <- dialogRun dlg
@@ -47,7 +59,12 @@ showSettingsDlg win cfgRef = do
         putStrLn "okay"
         showLegend <- toggleButtonGetActive showLegendCheckbox
         highlight <- toggleButtonGetActive highlightCheckbox
-        let cfg' = Config showLegend highlight
+        useSamples <- toggleButtonGetActive useSamplesCheckbox
+        samplesNr <- spinButtonGetValueAsInt samplesSpin
+        let samples = if useSamples
+                        then Just $ fromIntegral samplesNr
+                        else Nothing
+        let cfg' = Config showLegend highlight samples
         writeIORef cfgRef cfg'
         saveConfig cfg'
         return True

@@ -59,6 +59,7 @@ bytesFormat = def { _nfThouSep = " ", _nfPrec = Just (0, Decimals) }
 data Config = Config {
       cfgShowLegend :: Bool
     , cfgHighlight :: Bool
+    , cfgSamplesNr :: Maybe Int
   }
   deriving (Eq, Show)
 

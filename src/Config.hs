@@ -14,18 +14,20 @@ import System.Directory
 import Types
 
 instance Default Config where
-  def = Config True True
+  def = Config True True (Just 500)
 
 instance ToJSON Config where
   toJSON cfg = object [
                   "show-legend" .= cfgShowLegend cfg
                 , "highlight-selected" .= cfgHighlight cfg
+                , "samples-count" .= cfgSamplesNr cfg
                 ]
 
 instance FromJSON Config where
   parseJSON = withObject "Config" $ \v -> Config
       <$> v .: "show-legend"
       <*> v .: "highlight-selected"
+      <*> v .: "samples-count"
 
 getConfigPath :: IO FilePath
 getConfigPath = do

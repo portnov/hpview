@@ -27,8 +27,9 @@ parseName name =
         in  NameInfo pkg name mod local
     _ -> NameInfo global name global name
 
-resampleHeap :: Int -> Heap -> Heap
-resampleHeap nTarget heap = heap {heapSamples = resample (heapSamples heap)}
+resampleHeap :: Maybe Int -> Heap -> Heap
+resampleHeap Nothing heap = heap
+resampleHeap (Just nTarget) heap = heap {heapSamples = resample (heapSamples heap)}
   where
     resample samples =
       let n = length samples

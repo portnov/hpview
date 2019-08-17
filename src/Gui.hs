@@ -44,6 +44,7 @@ whenJust = forM_
 runWindow :: Heap -> IO ()
 runWindow heap = do
   initCfg <- loadConfig
+  cfgRef <- newIORef initCfg
 
   GI.init Nothing
   -- Create a new window
@@ -57,11 +58,9 @@ runWindow heap = do
 
   let invalidateChart = writeIORef chartSurfaceRef M.empty
 
-  let nSamples = 500
-
+  nSamples <- askConfig cfgSamplesNr cfgRef
   let allDatas = allSamplesData $ filterHeap Nothing 10 TraceTotal dfltTracePercent (const True) True $ resampleHeap nSamples heap
   dataRef <- newIORef allDatas
-  cfgRef <- newIORef initCfg
 
   fromXRef <- newIORef Nothing
   selectionRef <- newIORef Nothing
@@ -286,6 +285,7 @@ runWindow heap = do
       let mbTimeFilter = case timeFilters of
                            [] -> Nothing
                            (fltr : _) -> Just fltr
+      nSamples <- askConfig cfgSamplesNr cfgRef
       let datas = allSamplesData $ resampleHeap nSamples $ filterHeap mbTimeFilter (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
       writeIORef dataRef datas
       invalidateChart
