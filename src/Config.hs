@@ -43,7 +43,10 @@ loadConfig = do
     then do
       r <- decodeFileEither path
       case r of
-        Left err -> fail (show err)
+        Left err -> do
+          putStrLn $ "Can't parse config file: " ++ show err
+          putStrLn "will use default config."
+          return def
         Right cfg -> return cfg
     else return def
 
