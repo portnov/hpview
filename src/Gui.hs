@@ -57,7 +57,9 @@ runWindow heap = do
 
   let invalidateChart = writeIORef chartSurfaceRef M.empty
 
-  let allDatas = allSamplesData $ filterHeap Nothing 10 TraceTotal dfltTracePercent (const True) True heap
+  let nSamples = 500
+
+  let allDatas = allSamplesData $ filterHeap Nothing 10 TraceTotal dfltTracePercent (const True) True $ resampleHeap nSamples heap
   dataRef <- newIORef allDatas
   cfgRef <- newIORef initCfg
 
@@ -284,7 +286,7 @@ runWindow heap = do
       let mbTimeFilter = case timeFilters of
                            [] -> Nothing
                            (fltr : _) -> Just fltr
-      let datas = allSamplesData $ filterHeap mbTimeFilter (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
+      let datas = allSamplesData $ resampleHeap nSamples $ filterHeap mbTimeFilter (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
       writeIORef dataRef datas
       invalidateChart
       widgetQueueDraw area

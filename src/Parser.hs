@@ -16,24 +16,24 @@ import Types
 import Operations (calcNameWeight)
 
 data ParserState = ParserState {
-    psHeader :: Header
-  , psHeaderParsed :: Bool
-  , psSamples :: [Sample ItemsMap]
-  , psCurrentSample :: Sample ItemsMap
+    psHeader :: ! Header
+  , psHeaderParsed :: ! Bool
+  , psSamples :: ! [Sample ItemsMap]
+  , psCurrentSample :: ! (Sample ItemsMap)
   }
 
 data LineData =
-    JOB T.Text
-  | DATE T.Text
-  | SAMPLE_UNIT T.Text
-  | VALUE_UNIT T.Text
-  | BEGIN_SAMPLE Double
-  | END_SAMPLE Double
-  | DATA T.Text Int
+    JOB ! T.Text
+  | DATE ! T.Text
+  | SAMPLE_UNIT ! T.Text
+  | VALUE_UNIT ! T.Text
+  | BEGIN_SAMPLE ! Double
+  | END_SAMPLE ! Double
+  | DATA ! T.Text ! Int
   deriving (Show)
 
 initState :: ParserState
-initState = ParserState zeroHeader False [] undefined
+initState = ParserState zeroHeader False [] (Sample 0 M.empty)
 
 zeroHeader :: Header
 zeroHeader = Header "" "" "" ""

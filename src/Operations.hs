@@ -27,6 +27,32 @@ parseName name =
         in  NameInfo pkg name mod local
     _ -> NameInfo global name global name
 
+resampleHeap :: Int -> Heap -> Heap
+resampleHeap nTarget heap = heap {heapSamples = resample (heapSamples heap)}
+  where
+    resample samples =
+      let n = length samples
+      in  if n <= nTarget
+            then samples
+            else let d = n `div` nTarget
+                 in  head samples : each d (tail samples)
+
+resampleData :: Int -> SamplesData -> SamplesData
+resampleData nTarget datas =
+  let n = length datas
+  in  if n <= nTarget
+        then datas
+        else let d = n `div` nTarget
+             in  head datas : each d (tail datas)
+    
+each :: Int -> [a] -> [a]
+each d list = go 0 d list
+  where
+    go i d [] = []
+    go i d (x : xs)
+      | i == d = x : go 0 d xs
+      | otherwise = go (i+1) d xs
+
 filterHeap :: Maybe (Double, Double) -> Int -> TraceStyle -> Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
 filterHeap mbTime n traceStyle tracePercent good showTrace heap =
     heap {heapSamples = map filterSample $ filter checkTime (heapSamples heap)}
