@@ -3,6 +3,8 @@ hpview README
 
 `hpview` is a GHC's `.hp` (heap profile) files viewer, implemented in Haskell + Gtk3.
 
+![Screenshot](https://user-images.githubusercontent.com/284644/63210503-94b06c80-c108-11e9-95a3-0e503121bc17.png)
+
 It may be nicer than use of [hp2pretty][1] because of the follwing features:
 
 * No need to convert `.hp` to `.svg` and then open `.svg` with another program,
@@ -35,16 +37,22 @@ It may be nicer than use of [hp2pretty][1] because of the follwing features:
   preferences dialog is called with a button in right bottom corner of the
   window.
 * Highlighting of the area under mouse cursor may be disabled in preferences dialog.
+* Optional downsampling. Downsampling algorithm is very simple (it just takes
+  each N'ths item) and thus not very precise; but downsampling can make the
+  resulting chart much cleaner and more readable, and also it helps with
+  performance. Number of samples to use is specified in the preferences window.
+  By default, downsampling to 500 samples is used; it means that `hpview` will
+  draw not more than 500 samples along time axis on the screen. You may use
+  interactive zooming on the area of interest if you wish to see more details.
 
 Other features may be added later.
 
-![Screenshot](https://user-images.githubusercontent.com/284644/63210503-94b06c80-c108-11e9-95a3-0e503121bc17.png)
-
-Performance: it takes about 40 seconds to display a `.hp` file of 181 Mb in
-size on my machine (i5 2.8GHz), from start to displayed chart. In my practice,
-usually smaller files give even more insight into what's going on than bigger
-ones; so I am not going to invest a lot of time into this matter. But PRs are
-welcome.
+Performance: it takes about 25 seconds to display a `.hp` file of 181 Mb in
+size on my machine (i5 2.8GHz), from start to displayed chart, without
+downsampling. With downsampling to 500 samples, it takes about 17 seconds. In
+my practice, usually smaller files give even more insight into what's going on
+than bigger ones; so I am not going to invest a lot of time into this matter.
+But PRs are welcome.
 
 Installation
 ------------
