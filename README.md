@@ -14,6 +14,14 @@ It may be nicer than use of [hp2pretty][1] because of the follwing features:
 * Interactive filtering by item name, module or package name (module and
   package filtering works for `-hc` mode; for all other modes, only name
   filtering is useful).
+* Interactive zoom:
+  * Select time interval by dragging mouse with left button held pressed;
+  * Zoom selected part of the chart by clicking "Zoom In" button in the bottom
+    right corner;
+  * Return to previous zoom level by clicking "Zoom Out" button in the bottom
+    right corner;
+  * Return to original zoom level (to fit the whole chart into the window) by
+    clicking "Reset Zoom" button in the bottom right corner.
 * Displaying of "trace elements", i.e. items that occupy very small amounts of
   memory. Such items are merged into one band called `(trace elements)`, as
   `hp2pretty` does. There are several options for such elements:
@@ -30,7 +38,7 @@ It may be nicer than use of [hp2pretty][1] because of the follwing features:
 
 Other features may be added later.
 
-![Screenshot](https://user-images.githubusercontent.com/284644/63179678-1e5b2e00-c066-11e9-983b-a29292f6189b.png)
+![Screenshot](https://user-images.githubusercontent.com/284644/63210503-94b06c80-c108-11e9-95a3-0e503121bc17.png)
 
 Installation
 ------------
