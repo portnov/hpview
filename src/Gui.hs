@@ -38,6 +38,9 @@ dfltTracePercent = 1
 type LayoutPickFn = PickFn (LayoutPick Double Int Int)
 type ChartCache = M.Map (Maybe T.Text) (Surface, LayoutPickFn)
 
+whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
+whenJust = forM_
+
 runWindow :: Heap -> IO ()
 runWindow heap = do
   initCfg <- loadConfig
@@ -51,9 +54,13 @@ runWindow heap = do
   highlightRef <- newIORef Nothing
   pointerRef <- newIORef Nothing
   chartSurfaceRef <- newIORef M.empty
-  let allDatas = allSamplesData $ filterHeap 10 TraceTotal dfltTracePercent (const True) True heap
+  let allDatas = allSamplesData $ filterHeap Nothing 10 TraceTotal dfltTracePercent (const True) True heap
   dataRef <- newIORef allDatas
   cfgRef <- newIORef initCfg
+
+  fromXRef <- newIORef Nothing
+  selectionRef <- newIORef Nothing
+  timeFilterRef <- newIORef []
   
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
 
@@ -108,6 +115,48 @@ runWindow heap = do
       -- invalidate existing surface, if any
       writeIORef chartSurfaceRef M.empty
       return False
+
+  onWidgetButtonPressEvent area $ \ev -> do
+      btn <- getEventButtonButton ev
+      if btn == 1
+        then do
+          x <- getEventButtonX ev
+          writeIORef selectionRef Nothing
+          writeIORef fromXRef $ Just x
+          return False
+        else return True
+
+  let translateTime x = do
+        datas <- readIORef dataRef
+        showLegend <- askConfig cfgShowLegend cfgRef
+        let chart = ChartData title Nothing showLegend datas
+        (_, pickFn) <- getChartSurface chartSurfaceRef chart area
+        height <- widgetGetAllocatedHeight area
+        let y = fromIntegral $ height `div` 2
+        case pickFn (Chart.Point x y) of
+          Just (LayoutPick_PlotArea time _ _) -> return $ Just time
+          _ -> return Nothing
+
+  let detectTimeInterval fromX toX = do
+        fromTime <- translateTime fromX
+        toTime <- translateTime toX
+        case (fromTime, toTime) of
+          (Just t1, Just t2) -> return $ Just (t1, t2)
+          _ -> return Nothing
+
+  onWidgetButtonReleaseEvent area $ \ev -> do
+      btn <- getEventButtonButton ev
+      if btn == 1
+        then do
+          x <- getEventButtonX ev
+          mbFromX <- readIORef fromXRef
+          whenJust mbFromX $ \fromX -> do
+              mbTime <- detectTimeInterval fromX x
+              whenJust mbTime $ \(timeFrom, timeTo) ->
+                  writeIORef selectionRef $ Just (fromX, x, timeFrom, timeTo)
+          writeIORef fromXRef Nothing
+          return False
+        else return True
       
   onWidgetDraw area $ \ctx -> do
       renderWithContext ctx $ do
@@ -124,9 +173,17 @@ runWindow heap = do
           paint
 
           mbPointer <- liftIO $ readIORef pointerRef
-          case mbPointer of
-            Nothing -> return ()
-            Just ptr -> drawCross area ptr
+          whenJust mbPointer $ \ptr -> do
+              mbXFrom <- liftIO $ readIORef fromXRef
+              whenJust mbXFrom $ \fromX -> do
+                  let toX = fst ptr
+                  drawSelection area fromX toX
+
+              mbSelection <- liftIO $ readIORef selectionRef
+              whenJust mbSelection $ \(fromX, toX, _, _) -> 
+                  drawSelection area fromX toX
+
+              drawCross area ptr
       return True
 
   widgetAddEvents area [GI.Gdk.EventMaskAllEventsMask]
@@ -138,7 +195,37 @@ runWindow heap = do
   setWidgetMargin status 5
   -- setContainerBorderWidth statusBox 10
 
+  zoomInBtn <- buttonNewFromIconName (Just "zoom-in") $ fromIntegral (fromEnum IconSizeMenu)
+  widgetSetTooltipText zoomInBtn (Just "Zoom to selection")
+  onButtonClicked zoomInBtn $ do
+      mbSelection <- readIORef selectionRef
+      whenJust mbSelection $ \(_, _, t1, t2) -> do
+        prevFilter <- readIORef timeFilterRef
+        let fromTime = min t1 t2
+            toTime = max t1 t2
+        writeIORef timeFilterRef $ (fromTime, toTime) : prevFilter
+        writeIORef selectionRef Nothing
+        buttonClicked searchButton
+
+  zoomOutBtn <- buttonNewFromIconName (Just "zoom-out") $ fromIntegral (fromEnum IconSizeMenu)
+  widgetSetTooltipText zoomOutBtn (Just "Return to previous zoom level")
+  onButtonClicked zoomOutBtn $ do
+      mbSelection <- readIORef selectionRef
+      prevFilter <- readIORef timeFilterRef
+      case prevFilter of
+        [] -> return ()
+        (last : old) -> writeIORef timeFilterRef old
+      writeIORef selectionRef Nothing
+      buttonClicked searchButton
+
+  zoomResetBtn <- buttonNewFromIconName (Just "zoom-original") $ fromIntegral (fromEnum IconSizeMenu)
+  widgetSetTooltipText zoomResetBtn (Just "Reset zoom")
+  onButtonClicked zoomResetBtn $ do
+      writeIORef timeFilterRef []
+      buttonClicked searchButton
+
   settingsBtn <- buttonNewFromIconName (Just "preferences-system") $ fromIntegral (fromEnum IconSizeMenu)
+  widgetSetTooltipText settingsBtn (Just "Preferences")
   onButtonClicked settingsBtn $ do
       ok <- showSettingsDlg window cfgRef
       when ok $
@@ -146,6 +233,9 @@ runWindow heap = do
         writeIORef chartSurfaceRef M.empty
 
   boxPackStart statusBox status True True 0
+  boxPackStart statusBox zoomInBtn False False 0
+  boxPackStart statusBox zoomOutBtn False False 0
+  boxPackStart statusBox zoomResetBtn False False 0
   boxPackStart statusBox settingsBtn False False 0
 
   boxPackStart vbox searchHbox False False 0
@@ -179,21 +269,25 @@ runWindow heap = do
       return True
 
   on searchButton #clicked $ do
-    text <- entryGetText entry
-    Just fieldId <- comboBoxGetActiveId searchFieldCombo
-    let field = read $ T.unpack fieldId
-    Just methodId <- comboBoxGetActiveId searchMethodCombo
-    let method = read $ T.unpack methodId
-    maxN <- spinButtonGetValueAsInt maxSpin
-    drawTrace <- toggleButtonGetActive drawTraceCheckbox
-    tracePercent <- spinButtonGetValueAsInt tracePercentSpin
-    Just traceStyleId <- comboBoxGetActiveId traceStyleCombo
-    let traceStyle = read $ T.unpack traceStyleId
-    let datas = allSamplesData $ filterHeap (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
-    writeIORef dataRef datas
-    -- invalidate existing surface, if any
-    writeIORef chartSurfaceRef M.empty
-    widgetQueueDraw area
+      text <- entryGetText entry
+      Just fieldId <- comboBoxGetActiveId searchFieldCombo
+      let field = read $ T.unpack fieldId
+      Just methodId <- comboBoxGetActiveId searchMethodCombo
+      let method = read $ T.unpack methodId
+      maxN <- spinButtonGetValueAsInt maxSpin
+      drawTrace <- toggleButtonGetActive drawTraceCheckbox
+      tracePercent <- spinButtonGetValueAsInt tracePercentSpin
+      Just traceStyleId <- comboBoxGetActiveId traceStyleCombo
+      let traceStyle = read $ T.unpack traceStyleId
+      timeFilters <- readIORef timeFilterRef
+      let mbTimeFilter = case timeFilters of
+                           [] -> Nothing
+                           (fltr : _) -> Just fltr
+      let datas = allSamplesData $ filterHeap mbTimeFilter (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
+      writeIORef dataRef datas
+      -- invalidate existing surface, if any
+      writeIORef chartSurfaceRef M.empty
+      widgetQueueDraw area
 
   setContainerChild window vbox
   widgetShowAll window
@@ -215,6 +309,15 @@ drawCross area (xc, yc) = do
   Cairo.lineTo xc (fromIntegral height)
   stroke
   setDash [] 0
+
+drawSelection :: DrawingArea -> Double -> Double -> Render ()
+drawSelection area fromX toX = do
+  width <- liftIO $ widgetGetAllocatedWidth area
+  height <- liftIO $ widgetGetAllocatedHeight area
+
+  rectangle fromX 0 (toX - fromX) (fromIntegral height)
+  setSourceRGBA 0 0 0.5 0.2
+  fill
 
 getChartSurface :: IORef ChartCache -> ChartData -> DrawingArea -> IO (Surface, LayoutPickFn)
 getChartSurface surfaceRef chart area = do

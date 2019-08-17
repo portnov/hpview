@@ -27,14 +27,19 @@ parseName name =
         in  NameInfo pkg name mod local
     _ -> NameInfo global name global name
 
-filterHeap :: Int -> TraceStyle -> Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
-filterHeap n traceStyle tracePercent good showTrace heap =
-    heap {heapSamples = map filterSample (heapSamples heap)}
+filterHeap :: Maybe (Double, Double) -> Int -> TraceStyle -> Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
+filterHeap mbTime n traceStyle tracePercent good showTrace heap =
+    heap {heapSamples = map filterSample $ filter checkTime (heapSamples heap)}
   where
     keys = M.keys $ heapWeights heap
     sortedKeys = sortOn (negate . weight) keys
     goodKeys = S.fromList $ take keysCount $ filter good sortedKeys
     filterSample sample = sample {sampleItems = filterItems (sampleItems sample) }
+
+    checkTime sample =
+      case mbTime of
+        Nothing -> True
+        Just (from, to) -> from <= sampleTime sample && sampleTime sample <= to
 
     weights = heapWeights heap
     sortedWeights = map weight sortedKeys
