@@ -16,10 +16,10 @@ import Operations
 main :: IO ()
 main = do
   [file] <- getArgs
-  text <- TLIO.readFile file
+  text <- TIO.readFile file
   let heap = parseHeap text
   print $ heapHeader heap
   print $ length $ heapSamples heap
 
-  -- runWindow heap
+  runWindow heap
 
