@@ -28,7 +28,7 @@ addons:
       - happy
       - libgtk-3-dev
       - libgirepository-1.0-1
-      - libgirepository-1.0-dev
+      - libgirepository1.0-dev
       - gobject-introspection
 
 matrix:
