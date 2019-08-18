@@ -34,16 +34,6 @@ resolver: lts-13.27
 #  - wai
 packages:
 - .
-- location:
-    git: https://github.com/timbod7/haskell-chart
-    commit: 51d94b16f56fffe3464306d568e68e7a63e3b3bb
-    subdirs:
-      - chart
-  extra-dep: true
-- location:
-    git: https://github.com/portnov/formattable
-    commit: 57fbaeb3defd7c8c929695f5e059129937f91283
-  extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
@@ -53,6 +43,12 @@ extra-deps:
   - gtk2hs-buildtools-0.13.5.0
   - Chart-cairo-1.9.1
   - text-format-heavy-0.1.5.2
+  - git: https://github.com/timbod7/haskell-chart
+    commit: 51d94b16f56fffe3464306d568e68e7a63e3b3bb
+    subdirs:
+      - chart
+  - git: https://github.com/portnov/formattable
+    commit: 57fbaeb3defd7c8c929695f5e059129937f91283
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
