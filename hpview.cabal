@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ae01494fff910b2d300ad591574d574f2ddf62b5155ee981dc1fe9bfc965ab02
+-- hash: 937e35d7a3a466cf17523ea80240a89c961522ecb505b63a242f9d8fbcf97099
 
 name:           hpview
 version:        0.1.0.0

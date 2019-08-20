@@ -5,3 +5,11 @@
 *.hi
 *.o
 *.log
+docker/work
+docker/target
+docker/stack
+docker/build/
+debian/hpview/
+debian/files
+debian/debhelper-build-stamp
+

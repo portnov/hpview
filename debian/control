@@ -1,0 +1,18 @@
+Source: hpview
+Maintainer: Ilya V . Portnov <portnov84@rambler.ru>
+Priority: optional
+Section: haskell
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.6
+Homepage: https://github.com/portnov/portnov#readme
+X-Description:
+ Please see the README on GitHub at <https://github.com/portnov/hpview#readme>
+
+Package: hpview
+Architecture: any
+Section: misc
+Depends: ${shlibs:Depends}
+Description: GHC's .hp (heap profile) files viewer, implemented in Haskell + Gtk3.
+  .
+  More interactive analog of hp2pretty.
+
