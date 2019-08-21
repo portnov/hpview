@@ -94,6 +94,7 @@ makeChart chart =
 
   in layout_grid_last .~ True
              $ layout_background %~ background
+             $ layout_title_style %~ setFontStyle
              $ layout_plots .~ (map (toPlot . mkPlot) datas)
              $ layout_title .~ (T.unpack title)
              $ layout_x_axis .~ xAxis
