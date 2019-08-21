@@ -3,7 +3,7 @@ hpview README
 
 `hpview` is a GHC's `.hp` (heap profile) files viewer, implemented in Haskell + Gtk3.
 
-![Screenshot](https://user-images.githubusercontent.com/284644/63210503-94b06c80-c108-11e9-95a3-0e503121bc17.png)
+![Screenshot](https://user-images.githubusercontent.com/284644/63450688-f7cd3680-c45b-11e9-900a-245bfa9cb444.png)
 
 It may be nicer than use of [hp2pretty][1] because of the follwing features:
 
