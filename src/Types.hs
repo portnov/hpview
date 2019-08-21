@@ -5,6 +5,7 @@ module Types where
 import qualified Data.Text as T
 import qualified Data.Map as M
 import Data.Default.Class
+import Data.Colour
 import Formattable.NumFormat
 
 data Heap = Heap {
@@ -65,10 +66,15 @@ data Config = Config {
 
 type SamplesData = [(T.Text, [(Double, (Int, Int))])]
 
+data ChartTheme = ChartTheme {
+    thmForeground :: AlphaColour Double
+  }
+
 data ChartData = ChartData {
       chtTitle :: T.Text
     , chtHighlgiht :: Maybe T.Text
     , chtLegend :: Bool
+    , chtTheme :: Maybe ChartTheme
     , chtSamples :: SamplesData
   }
 

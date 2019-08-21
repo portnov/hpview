@@ -14,6 +14,7 @@ import Data.Default.Class
 import Graphics.Rendering.Chart
 import Numeric (showEFloat, showFFloat)
 import Formattable.NumFormat
+import qualified GI.Gdk
 
 import Types
 import Operations
@@ -51,21 +52,53 @@ makeChart chart =
         | mbHighlight == Just name = darken 0.1 (fillColor name)
         | otherwise = darken 0.5 (fillColor name)
 
-      yAxis = laxis_generate .~ (autoScaledIntAxis yAxisParams) $ def
+      setFontStyle t =
+        case chtTheme chart of
+          Nothing -> t
+          Just theme -> font_color .~ thmForeground theme $ t
 
+      setLineColor =
+        case chtTheme chart of
+          Nothing -> id
+          Just theme -> line_color .~ thmForeground theme
+
+      gridStyle =
+        case chtTheme chart of
+          Nothing -> defaultGridLineStyle
+          Just theme -> dashedLine 1 [5, 5] $ dissolve 0.5 (thmForeground theme)
+
+      setAxisColor =
+          laxis_style %~ (axis_label_style %~ setFontStyle) .
+                         (axis_line_style %~ setLineColor) .
+                         (axis_grid_style .~ gridStyle)
+
+      yAxis = laxis_generate .~ (autoScaledIntAxis yAxisParams) $ setAxisColor def
       yAxisParams = la_labelf .~ (map showD) $ (defaultIntAxis :: LinearAxisParams Int)
+
+      xAxis = setAxisColor def
+
+      setLegendFont =
+        case chtTheme chart of
+          Nothing -> id
+          Just theme -> legend_label_style %~ setFontStyle
 
       legend =
         if chtLegend chart
-          then Just $ legend_orientation .~ LOCols 4 $ def
+          then Just $ setLegendFont $ legend_orientation .~ LOCols 4 $ def
           else Nothing
 
+      background =
+        case chtTheme chart of
+          Nothing -> id
+          Just theme -> fill_color .~ transparent
+
   in layout_grid_last .~ True
+             $ layout_background %~ background
              $ layout_plots .~ (map (toPlot . mkPlot) datas)
              $ layout_title .~ (T.unpack title)
+             $ layout_x_axis .~ xAxis
              $ layout_y_axis .~ yAxis
              $ layout_legend .~ legend
---              $ layout_legend .~ Nothing
              $ def
 
 showD :: Int -> String

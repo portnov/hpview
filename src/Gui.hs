@@ -129,10 +129,12 @@ runWindow heap = do
           return False
         else return True
 
+  theme <- getTheme window
+
   let translateTime x = do
         datas <- readIORef dataRef
         showLegend <- askConfig cfgShowLegend cfgRef
-        let chart = ChartData title Nothing showLegend datas
+        let chart = ChartData title Nothing showLegend (Just theme) datas
         (_, pickFn) <- getChartSurface chartSurfaceRef chart area
         height <- widgetGetAllocatedHeight area
         let y = fromIntegral $ height `div` 2
@@ -163,13 +165,18 @@ runWindow heap = do
       
   onWidgetDraw area $ \ctx -> do
       renderWithContext ctx $ do
+          width <- liftIO $ widgetGetAllocatedWidth area
+          height <- liftIO $ widgetGetAllocatedHeight area
+          style <- liftIO $ widgetGetStyleContext area
+          liftIO $ renderBackground style ctx 0 0 (fromIntegral width) (fromIntegral height)
+
           datas <- liftIO $ readIORef dataRef
           mbHighlight <- liftIO $ readIORef highlightRef
 
           -- Get previously prepared (off-screen) Surface with already drawn chart or draw a new one
           -- (or draw a new one if there is no one prepared)
           showLegend <- liftIO $ askConfig cfgShowLegend cfgRef
-          let chart = ChartData title mbHighlight showLegend datas
+          let chart = ChartData title mbHighlight showLegend (Just theme) datas
           (chartSurface, _) <- liftIO $ getChartSurface chartSurfaceRef chart area
           -- Paint that surface onto the widget
           setSourceSurface chartSurface 0 0
@@ -249,7 +256,7 @@ runWindow heap = do
       y <- getEventMotionY ev
       datas <- readIORef dataRef
       showLegend <- askConfig cfgShowLegend cfgRef
-      let chart = ChartData title Nothing showLegend datas
+      let chart = ChartData title Nothing showLegend (Just theme) datas
       (_, pickFn) <- getChartSurface chartSurfaceRef chart area
       case pickFn (Chart.Point x y) of
         Just (LayoutPick_PlotArea x y _) -> do
@@ -296,6 +303,19 @@ runWindow heap = do
   -- All Gtk+ applications must run the main event loop. Control ends here and
   -- waits for an event to occur (like a key press or mouse event).
   GI.main
+
+convertColor :: GI.Gdk.RGBA -> IO (AlphaColour Double)
+convertColor rgba = do
+    r <- getRGBARed rgba
+    g <- getRGBAGreen rgba
+    b <- getRGBABlue rgba
+    return $ opaque $ sRGB r g b
+
+getTheme :: Window -> IO ChartTheme
+getTheme w = do
+  style <- widgetGetStyleContext w
+  foreground <- convertColor =<< styleContextGetColor style [StateFlagsNormal]
+  return $ ChartTheme foreground
 
 drawCross :: DrawingArea -> (Double, Double) -> Render ()
 drawCross area (xc, yc) = do
