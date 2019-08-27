@@ -1,6 +1,8 @@
 hpview README
 =============
 
+[![Build Status](https://travis-ci.org/portnov/hpview.svg?branch=master)](https://travis-ci.org/portnov/hpview)
+
 `hpview` is a GHC's `.hp` (heap profile) files viewer, implemented in Haskell + Gtk3.
 
 ![Screenshot](https://user-images.githubusercontent.com/284644/63450688-f7cd3680-c45b-11e9-900a-245bfa9cb444.png)
