@@ -264,7 +264,7 @@ runWindow heap = do
             Just (key, x, dy) -> do
                 let bytes = hValueUnit (heapHeader heap)
                     seconds = hSampleUnit (heapHeader heap)
-                let text = format "{}: {} {} at {:.2} {}" (key, formatNum bytesFormat dy, bytes, x, seconds)
+                let text = format "{}: {} at {:.2} {}" (key, formatNum bytesFormat dy, x, seconds)
                 labelSetText status (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
                 doHighlight <- askConfig cfgHighlight cfgRef

@@ -55,7 +55,12 @@ data TraceStyle = TraceTotal | TraceEach
   deriving (Eq, Show, Read, Enum, Bounded)
 
 bytesFormat :: NumFormat
-bytesFormat = def { _nfThouSep = " ", _nfPrec = Just (0, Decimals) }
+bytesFormat = def {
+    _nfThouSep = " ",
+    _nfPrec = Just (0, Decimals),
+    _nfStyle = SIStyle,
+    _nfSuffix = "B"
+  }
 
 data Config = Config {
       cfgShowLegend :: Bool
