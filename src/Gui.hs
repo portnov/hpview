@@ -4,12 +4,14 @@
 module Gui where
 
 import Control.Monad
-import Control.Lens
+import Control.Lens hiding (set)
 import Data.Default.Class
 import Data.Colour
 import Data.Colour.SRGB
 import Data.Colour.Names
 import Data.Int
+import Data.List (isSuffixOf)
+import Data.Char (toUpper)
 import Data.IORef
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -99,6 +101,8 @@ runWindow heap = do
                            (TraceTotal, "All trace elements give in total less than...")
                          , (TraceEach, "Each trace element gives less than...")
                        ]
+
+  saveBtn <- buttonNewFromIconName (Just "document-save") $ fromIntegral (fromEnum IconSizeMenu)
   
   boxPackStart searchHbox searchFieldCombo False False 0
   boxPackStart searchHbox searchMethodCombo False False 0
@@ -110,6 +114,7 @@ runWindow heap = do
   boxPackStart searchHbox tracePercentLbl False False 0
   boxPackStart searchHbox drawTraceCheckbox False False 10
   boxPackStart searchHbox searchButton False False 0
+  boxPackStart searchHbox saveBtn False False 0
 
   on entry #activate $ buttonClicked searchButton
   on maxSpin #activate $ buttonClicked searchButton
@@ -299,6 +304,24 @@ runWindow heap = do
       invalidateChart
       widgetQueueDraw area
 
+  on saveBtn #clicked $ do
+    mbPath <- selectFile window
+    whenJust mbPath $ \path -> do
+      print path
+      datas <- readIORef dataRef
+      showLegend <- askConfig cfgShowLegend cfgRef
+      let chart = ChartData title Nothing showLegend (Just theme) datas
+      size@(width, height) <- getAreaSize area
+      if ".SVG" `isSuffixOf` map toUpper path
+        then withSVGSurface path (fromIntegral width) (fromIntegral height) $ \target -> do
+               renderWith target $ drawChart chart size
+               return ()
+        else do
+             surf <- createImageSurface FormatARGB32 (fromIntegral width) (fromIntegral height)
+             renderWith surf $ drawChart chart size
+             surfaceWriteToPNG surf path
+             return ()
+
   setContainerChild window vbox
   widgetShowAll window
   -- All Gtk+ applications must run the main event loop. Control ends here and
@@ -397,4 +420,34 @@ mkComboBox pairs = do
     comboBoxTextAppend combo (Just id) title
   comboBoxSetActive combo 0
   return combo
+
+selectFile :: Window -> IO (Maybe FilePath)
+selectFile parent = do
+  fc <- new FileChooserDialog [ #transientFor := parent ]
+  #addButton fc "Cancel" 0
+  #addButton fc "Save" 1
+  #setDefaultResponse fc 1
+
+  set fc [#action := FileChooserActionSave]
+
+  png <- fileFilterNew
+  fileFilterAddPattern png "*.png"
+  fileFilterSetName png (Just "PNG image")
+  fileChooserAddFilter fc png
+
+  svg <- fileFilterNew
+  fileFilterAddPattern svg "*.svg"
+  fileFilterSetName svg (Just "SVG image")
+  fileChooserAddFilter fc svg
+
+  response <- #run fc
+  result <-
+      if response == 1
+        then do selected <- #getFilename fc
+                return selected
+        else do
+          return Nothing
+
+  #destroy fc
+  return result
 
