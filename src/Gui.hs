@@ -37,6 +37,7 @@ dfltTracePercent = 1
 
 type LayoutPickFn = PickFn (LayoutPick Double Int Int)
 type ChartCache = M.Map (Maybe T.Text) (Surface, LayoutPickFn)
+type AreaSize = (Int32, Int32)
 
 whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
 whenJust = forM_
@@ -135,7 +136,7 @@ runWindow heap = do
         datas <- readIORef dataRef
         showLegend <- askConfig cfgShowLegend cfgRef
         let chart = ChartData title Nothing showLegend (Just theme) datas
-        (_, pickFn) <- getChartSurface chartSurfaceRef chart area
+        (_, pickFn) <- getChartSurface chartSurfaceRef chart =<< getAreaSize area
         height <- widgetGetAllocatedHeight area
         let y = fromIntegral $ height `div` 2
         case pickFn (Chart.Point x y) of
@@ -177,7 +178,7 @@ runWindow heap = do
           -- (or draw a new one if there is no one prepared)
           showLegend <- liftIO $ askConfig cfgShowLegend cfgRef
           let chart = ChartData title mbHighlight showLegend (Just theme) datas
-          (chartSurface, _) <- liftIO $ getChartSurface chartSurfaceRef chart area
+          (chartSurface, _) <- liftIO $ getChartSurface chartSurfaceRef chart =<< getAreaSize area
           -- Paint that surface onto the widget
           setSourceSurface chartSurface 0 0
           paint
@@ -257,7 +258,7 @@ runWindow heap = do
       datas <- readIORef dataRef
       showLegend <- askConfig cfgShowLegend cfgRef
       let chart = ChartData title Nothing showLegend (Just theme) datas
-      (_, pickFn) <- getChartSurface chartSurfaceRef chart area
+      (_, pickFn) <- getChartSurface chartSurfaceRef chart =<< getAreaSize area
       case pickFn (Chart.Point x y) of
         Just (LayoutPick_PlotArea x y _) -> do
           case searchKey datas x y of
@@ -341,23 +342,29 @@ drawSelection area fromX toX = do
   setSourceRGBA 0 0 0.5 0.2
   fill
 
-getChartSurface :: IORef ChartCache -> ChartData -> DrawingArea -> IO (Surface, LayoutPickFn)
-getChartSurface surfaceRef chart area = do
+getChartSurface :: IORef ChartCache -> ChartData -> AreaSize -> IO (Surface, LayoutPickFn)
+getChartSurface surfaceRef chart (width, height) = do
     cache <- readIORef surfaceRef
     case M.lookup (chtHighlgiht chart) cache of
       Nothing -> do
         -- this should only be executed in case when onWidgetDraw is called first time
         -- for this mbHighlight after cache is invalidated
-        (surface, fn) <- drawChartOffscreen surfaceRef chart area
+        (surface, fn) <- drawChartOffscreen surfaceRef chart (width, height)
         writeIORef surfaceRef $ M.insert (chtHighlgiht chart) (surface, fn) cache
         return (surface, fn)
 
       Just (surface, fn) -> return (surface, fn)
 
-drawChartOffscreen :: IORef ChartCache -> ChartData -> DrawingArea -> IO (Surface, LayoutPickFn)
-drawChartOffscreen surfaceRef chart area = do
+getAreaSize :: DrawingArea -> IO AreaSize
+getAreaSize area = do
+    width <- widgetGetAllocatedWidth area
+    height <- widgetGetAllocatedHeight area
+    return (width, height)
+
+drawChartOffscreen :: IORef ChartCache -> ChartData -> AreaSize -> IO (Surface, LayoutPickFn)
+drawChartOffscreen surfaceRef chart (width, height) = do
       surface <- recreateSurface 
-      fn <- renderWith surface $ drawChart chart area
+      fn <- renderWith surface $ drawChart chart (width, height)
       surfaceFlush surface
       cache <- readIORef surfaceRef
       writeIORef surfaceRef $ M.insert (chtHighlgiht chart) (surface, fn) cache
@@ -371,17 +378,13 @@ drawChartOffscreen surfaceRef chart area = do
         Nothing -> createSurface
 
     createSurface = do
-      width <- widgetGetAllocatedWidth area
-      height <- widgetGetAllocatedHeight area
       createImageSurface FormatARGB32 (fromIntegral width) (fromIntegral height)
       
-drawChart :: ChartData -> DrawingArea -> Render (PickFn (LayoutPick Double Int Int))
-drawChart chart area = do
-  width <- liftIO $ widgetGetAllocatedWidth area
-  height <- liftIO $ widgetGetAllocatedHeight area
+drawChart :: ChartData -> AreaSize -> Render (PickFn (LayoutPick Double Int Int))
+drawChart chart (width, height) = do
   renderChart (makeChart chart) (width, height)
 
-renderChart :: Chart.Layout Double Int -> (Int32, Int32) -> Render (PickFn (LayoutPick Double Int Int))
+renderChart :: Chart.Layout Double Int -> AreaSize -> Render (PickFn (LayoutPick Double Int Int))
 renderChart chart (width, height) = do
   let sz = (fromIntegral width, fromIntegral height)
   runBackend (defaultEnv bitmapAlignmentFns) (render (layoutToRenderable chart) sz)
