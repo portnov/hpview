@@ -46,6 +46,9 @@ It may be nicer than use of [hp2pretty][1] because of the follwing features:
   By default, downsampling to 500 samples is used; it means that `hpview` will
   draw not more than 500 samples along time axis on the screen. You may use
   interactive zooming on the area of interest if you wish to see more details.
+* It is possible to save currently displayed chart (with current filter, zoom
+  and so on) as PNG or SVG file - see the "save as" button in the top right corner
+  of the window, next to "filter" button.
 
 Other features may be added later.
 
