@@ -12,6 +12,7 @@ import Text.Regex.TDFA
 import Text.Regex.TDFA.Text () -- instances only
 
 import Types
+import Algebra
 
 global :: T.Text
 global = "GLOBAL"
@@ -57,12 +58,16 @@ each d list = go 0 d list
 
 filterHeap :: Filter -> Heap -> Heap
 filterHeap (Filter {..}) heap =
-    heap {heapSamples = map filterSample $ filter checkTime (heapSamples heap)}
+    heap {heapSamples = map filterSample timeFiltered}
   where
+    timeFiltered = filter checkTime (heapSamples heap)
     keys = M.keys $ heapWeights heap
     sortedKeys = sortOn (negate . weight) keys
-    goodKeys = S.fromList $ take keysCount $ filter fltrGrep sortedKeys
+    goodKeysList = take keysCount $ filter fltrGrep sortedKeys
+    goodKeys = S.fromList goodKeysList
     filterSample sample = sample {sampleItems = filterItems (sampleItems sample) }
+
+    growCoeffs = M.fromList [(key, growCoefficient key timeFiltered) | key <- goodKeysList] 
 
     checkTime sample =
       case fltrTimeSlice of
@@ -97,7 +102,14 @@ filterHeap (Filter {..}) heap =
 
     sumTrace items = M.singleton trace_name $ sum $ M.elems items
 
-    isGoodItem key _ = key `S.member` goodKeys
+    growCoeffMatches key =
+      let coeff = fromMaybe 0 (M.lookup key growCoeffs)
+      in  case fltrGrowCoeff of
+            Nothing -> True
+            Just (FasterThan, bound) -> coeff >= bound
+            Just (SlowerThan, bound) -> coeff <= bound
+
+    isGoodItem key _ = key `S.member` goodKeys && growCoeffMatches key
 
 allKeys :: Heap -> [T.Text]
 allKeys h =

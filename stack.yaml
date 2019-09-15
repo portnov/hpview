@@ -43,6 +43,7 @@ extra-deps:
   - gtk2hs-buildtools-0.13.5.0
   - Chart-cairo-1.9.1
   - text-format-heavy-0.1.5.2
+  - statistics-linreg-0.3
   - git: https://github.com/timbod7/haskell-chart
     commit: 51d94b16f56fffe3464306d568e68e7a63e3b3bb
     subdirs:

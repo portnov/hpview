@@ -54,12 +54,18 @@ data SearchField = Name | Module | Package
 data TraceStyle = TraceTotal | TraceEach
   deriving (Eq, Show, Read, Enum, Bounded)
 
+data GrowFilterType =
+    FasterThan
+  | SlowerThan
+  deriving (Eq, Show, Read)
+
 data Filter = Filter {
     fltrTimeSlice :: Maybe (Double, Double)
   , fltrCount :: Int
   , fltrTraceStyle :: TraceStyle
   , fltrTracePercent :: Int
   , fltrGrep :: T.Text -> Bool
+  , fltrGrowCoeff :: Maybe (GrowFilterType, Double)
   , fltrShowTrace :: Bool
   }
 
@@ -73,6 +79,7 @@ instance Default Filter where
           , fltrTraceStyle = TraceTotal
           , fltrTracePercent = dfltTracePercent
           , fltrGrep = const True
+          , fltrGrowCoeff = Nothing
           , fltrShowTrace = True
           }
 

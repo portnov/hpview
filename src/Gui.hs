@@ -98,12 +98,32 @@ runWindow heap = do
                            (TraceTotal, "All trace elements give in total less than...")
                          , (TraceEach, "Each trace element gives less than...")
                        ]
+  
+  growFilterTypeCombo <- mkComboBox [
+                              (Nothing, "Any grow ratio")
+                            , (Just FasterThan, "Grows faster than...")
+                            , (Just SlowerThan, "Grows slower than...")
+                          ]
+
+  growFilterSpin <- spinButtonNewWithRange (-1e10) (1e10) 1
+  spinButtonSetValue growFilterSpin 0
+  growUnitsLbl <- labelNew (Just "Kb/s")
+
+  afterComboBoxChanged growFilterTypeCombo $ do
+      Just fltrTypeId <- comboBoxGetActiveId growFilterTypeCombo
+      let fltrType = read (T.unpack fltrTypeId) :: Maybe GrowFilterType
+          hasFilter = fltrType /= Nothing
+      widgetSetVisible growFilterSpin hasFilter
+      widgetSetVisible growUnitsLbl hasFilter
 
   saveBtn <- buttonNewFromIconName (Just "document-save") $ fromIntegral (fromEnum IconSizeMenu)
   
   boxPackStart searchHbox searchFieldCombo False False 0
   boxPackStart searchHbox searchMethodCombo False False 0
-  boxPackStart searchHbox entry True True 0
+  boxPackStart searchHbox entry True True 10
+  boxPackStart searchHbox growFilterTypeCombo False False 0
+  boxPackStart searchHbox growFilterSpin False False 0
+  boxPackStart searchHbox growUnitsLbl False False 0
   boxPackStart searchHbox maxItemsLbl False False 10
   boxPackStart searchHbox maxSpin False False 10
   boxPackStart searchHbox traceStyleCombo False False 0
@@ -292,6 +312,14 @@ runWindow heap = do
       Just traceStyleId <- comboBoxGetActiveId traceStyleCombo
       timeFilters <- readIORef timeFilterRef
       nSamples <- askConfig cfgSamplesNr cfgRef
+
+      Just growFilterTypeId <- comboBoxGetActiveId growFilterTypeCombo
+      growFilterVal <- spinButtonGetValue growFilterSpin
+      let growFilterType = read (T.unpack growFilterTypeId)
+          growFilter = case growFilterType of
+                         Nothing -> Nothing
+                         Just f -> Just (f, 1024 * growFilterVal)
+
       let fltr = Filter {
                     fltrTimeSlice =  case timeFilters of
                                        [] -> Nothing
@@ -300,9 +328,11 @@ runWindow heap = do
                   , fltrTraceStyle = read $ T.unpack traceStyleId
                   , fltrTracePercent = fromIntegral tracePercent
                   , fltrGrep = checkItem field method text
+                  , fltrGrowCoeff = growFilter
                   , fltrShowTrace = drawTrace
                 }
-      let datas = allSamplesData $ resampleHeap nSamples $ filterHeap fltr heap
+      let filteredHeap = resampleHeap nSamples $ filterHeap fltr heap
+      let datas = allSamplesData filteredHeap
       writeIORef dataRef datas
       invalidateChart
       widgetQueueDraw area
@@ -327,6 +357,10 @@ runWindow heap = do
 
   setContainerChild window vbox
   widgetShowAll window
+
+  widgetHide growFilterSpin
+  widgetHide growUnitsLbl
+
   -- All Gtk+ applications must run the main event loop. Control ends here and
   -- waits for an event to occur (like a key press or mouse event).
   GI.main

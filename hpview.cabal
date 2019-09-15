@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 937e35d7a3a466cf17523ea80240a89c961522ecb505b63a242f9d8fbcf97099
+-- hash: a1783c7449f47826edfe11f59aaf9d532901ee613de753f5d13730856d107781
 
 name:           hpview
 version:        0.1.0.0
@@ -30,6 +30,7 @@ source-repository head
 executable hpview
   main-is: Main.hs
   other-modules:
+      Algebra
       Chart
       Config
       GiCairoBridge
@@ -64,8 +65,10 @@ executable hpview
     , mtl
     , regex-tdfa
     , regex-tdfa-text
+    , statistics-linreg
     , text
     , text-format-heavy
     , time
+    , vector
     , yaml
   default-language: Haskell2010
