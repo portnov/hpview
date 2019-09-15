@@ -43,6 +43,24 @@ type AreaSize = (Int32, Int32)
 whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
 whenJust = forM_
 
+withLabel :: IsWidget w => T.Text -> w -> IO (Box, w)
+withLabel name widget = do
+  lbl <- labelNew (Just name)
+  box <- boxNew OrientationHorizontal 0
+  boxPackStart box lbl False False 0
+  boxPackStart box widget True True 10
+  return (box, widget)
+
+withLabelAndSuffix :: IsWidget w => T.Text -> T.Text -> w -> IO (Box, w)
+withLabelAndSuffix name suffix widget = do
+  lbl <- labelNew (Just name)
+  suffixLbl <- labelNew (Just suffix)
+  box <- boxNew OrientationHorizontal 0
+  boxPackStart box lbl False False 0
+  boxPackStart box widget True True 0
+  boxPackStart box suffixLbl False False 10
+  return (box, widget)
+
 runWindow :: Heap -> IO ()
 runWindow heap = do
   initCfg <- loadConfig
@@ -72,12 +90,12 @@ runWindow heap = do
   
   let title = hJob (heapHeader heap) <> " at " <> hDate (heapHeader heap)
 
-  searchHbox <- boxNew OrientationHorizontal 0
+  filterSettingsBox <- flowBoxNew
+  flowBoxSetSelectionMode filterSettingsBox SelectionModeNone
+  flowBoxSetHomogeneous filterSettingsBox False
+
   entry <- searchEntryNew
-  maxItemsLbl <- labelNew (Just "Max. items:")
   searchButton <- buttonNewWithLabel "Filter"
-  maxSpin <- spinButtonNewWithRange 0 100 1
-  spinButtonSetValue maxSpin 10
 
   tracePercentLbl <- labelNew (Just "%")
   tracePercentSpin <- spinButtonNewWithRange 1 100 1
@@ -122,20 +140,34 @@ runWindow heap = do
 
   saveBtn <- buttonNewFromIconName (Just "document-save") $ fromIntegral (fromEnum IconSizeMenu)
   
-  boxPackStart searchHbox searchFieldCombo False False 0
-  boxPackStart searchHbox searchMethodCombo False False 0
-  boxPackStart searchHbox entry True True 10
-  boxPackStart searchHbox growFilterTypeCombo False False 0
-  boxPackStart searchHbox growFilterSpin False False 0
-  boxPackStart searchHbox growUnitsLbl False False 0
-  boxPackStart searchHbox maxItemsLbl False False 10
-  boxPackStart searchHbox maxSpin False False 10
-  boxPackStart searchHbox traceStyleCombo False False 0
-  boxPackStart searchHbox tracePercentSpin False False 0
-  boxPackStart searchHbox tracePercentLbl False False 0
-  boxPackStart searchHbox drawTraceCheckbox False False 10
-  boxPackStart searchHbox searchButton False False 0
-  boxPackStart searchHbox saveBtn False False 0
+  searchBox <- boxNew OrientationHorizontal 0
+  boxPackStart searchBox searchFieldCombo False False 0
+  boxPackStart searchBox searchMethodCombo False False 0
+  boxPackStart searchBox entry True True 0
+  containerAdd filterSettingsBox searchBox
+
+  growBox <- boxNew OrientationHorizontal 0
+  boxPackStart growBox growFilterTypeCombo False False 0
+  boxPackStart growBox growFilterSpin True True 0
+  boxPackStart growBox growUnitsLbl False False 0
+  containerAdd filterSettingsBox growBox
+
+  (maxBox, maxSpin) <- withLabel "Max. items:" =<< spinButtonNewWithRange 0 100 1
+  spinButtonSetValue maxSpin 10
+  containerAdd filterSettingsBox maxBox
+
+  traceBox <- boxNew OrientationHorizontal 0
+  boxPackStart traceBox traceStyleCombo False False 0
+  boxPackStart traceBox tracePercentSpin False False 0
+  boxPackStart traceBox tracePercentLbl False False 0
+  boxPackStart traceBox drawTraceCheckbox False False 0
+  containerAdd filterSettingsBox traceBox
+
+  filterBox <- boxNew OrientationHorizontal 0
+  boxPackStart filterBox filterSettingsBox True True 0
+
+  boxPackStart filterBox searchButton False False 0
+  boxPackStart filterBox saveBtn False False 0
 
   on entry #activate $ buttonClicked searchButton
   on maxSpin #activate $ buttonClicked searchButton
@@ -274,7 +306,7 @@ runWindow heap = do
   boxPackStart statusBox zoomResetBtn False False 0
   boxPackStart statusBox settingsBtn False False 0
 
-  boxPackStart vbox searchHbox False False 0
+  boxPackStart vbox filterBox False False 0
   boxPackStart vbox area True True 0
   boxPackStart vbox statusBox False False 0
 
