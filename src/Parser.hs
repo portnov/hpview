@@ -13,7 +13,8 @@ import qualified Data.Set as S
 import Data.Attoparsec.Text
 
 import Types
-import Operations (calcNameWeight)
+import Operations (calcNameWeight, allKeys)
+import Algebra
 
 data ParserState = ParserState {
     psHeader :: ! Header
@@ -44,7 +45,8 @@ parseHeap text =
         runParser = forM_ (T.lines text) parseLine
         samples = reverse $ psSamples st
         weights = M.unionsWith (+) $ map sampleItems $ psSamples st
-        heap = Heap (psHeader st) samples weights
+        coeffs = M.fromList [(key, growCoefficient  key (heapSamples heap)) | key <- allKeys heap]
+        heap = Heap (psHeader st) samples weights coeffs
     in  heap
 
 processLine :: LineData -> State ParserState ()

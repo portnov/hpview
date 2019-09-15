@@ -82,7 +82,7 @@ runWindow heap = do
   let filteredHeap = filterHeap def $ resampleHeap nSamples heap
   let allDatas = allSamplesData filteredHeap
   dataRef <- newIORef allDatas
-  growCoeffsRef <- newIORef $ allGrowCoeffs filteredHeap
+  growCoeffsRef <- newIORef $ heapGrowCoeffs filteredHeap
 
   fromXRef <- newIORef Nothing
   selectionRef <- newIORef Nothing
@@ -372,7 +372,7 @@ runWindow heap = do
       let filteredHeap = resampleHeap nSamples $ filterHeap fltr heap
       let datas = allSamplesData filteredHeap
       writeIORef dataRef datas
-      writeIORef growCoeffsRef $ allGrowCoeffs filteredHeap
+      writeIORef growCoeffsRef $ heapGrowCoeffs filteredHeap
       invalidateChart
       widgetQueueDraw area
 
@@ -403,9 +403,6 @@ runWindow heap = do
   -- All Gtk+ applications must run the main event loop. Control ends here and
   -- waits for an event to occur (like a key press or mouse event).
   GI.main
-
-allGrowCoeffs :: Heap -> M.Map T.Text Double
-allGrowCoeffs heap = M.fromList [(key, growCoefficient  key (heapSamples heap)) | key <- allKeys heap]
 
 convertColor :: GI.Gdk.RGBA -> IO (AlphaColour Double)
 convertColor rgba = do

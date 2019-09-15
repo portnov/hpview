@@ -58,7 +58,8 @@ each d list = go 0 d list
 
 filterHeap :: Filter -> Heap -> Heap
 filterHeap (Filter {..}) heap =
-    heap {heapSamples = map filterSample timeFiltered}
+    heap {heapSamples = map filterSample timeFiltered,
+          heapGrowCoeffs = growCoeffs}
   where
     timeFiltered = filter checkTime (heapSamples heap)
     keys = M.keys $ heapWeights heap

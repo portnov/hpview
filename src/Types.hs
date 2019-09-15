@@ -12,6 +12,7 @@ data Heap = Heap {
     heapHeader :: ! Header
   , heapSamples :: ! [Sample ItemsMap]
   , heapWeights :: M.Map T.Text Int
+  , heapGrowCoeffs :: M.Map T.Text Double
   }
   deriving (Eq, Show)
 
