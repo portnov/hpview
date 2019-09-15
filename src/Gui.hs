@@ -13,6 +13,7 @@ import Data.Int
 import Data.List (isSuffixOf)
 import Data.Char (toUpper)
 import Data.IORef
+import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -32,6 +33,7 @@ import Chart
 import Config
 import SettingsDlg
 import Operations
+import Algebra
 import GiCairoBridge
 
 type LayoutPickFn = PickFn (LayoutPick Double Int Int)
@@ -59,8 +61,10 @@ runWindow heap = do
   let invalidateChart = writeIORef chartSurfaceRef M.empty
 
   nSamples <- askConfig cfgSamplesNr cfgRef
-  let allDatas = allSamplesData $ filterHeap def $ resampleHeap nSamples heap
+  let filteredHeap = filterHeap def $ resampleHeap nSamples heap
+  let allDatas = allSamplesData filteredHeap
   dataRef <- newIORef allDatas
+  growCoeffsRef <- newIORef $ allGrowCoeffs filteredHeap
 
   fromXRef <- newIORef Nothing
   selectionRef <- newIORef Nothing
@@ -278,6 +282,7 @@ runWindow heap = do
       x <- getEventMotionX ev
       y <- getEventMotionY ev
       datas <- readIORef dataRef
+      coeffs <- readIORef growCoeffsRef
       showLegend <- askConfig cfgShowLegend cfgRef
       let chart = ChartData title Nothing showLegend (Just theme) datas
       (_, pickFn) <- getChartSurface chartSurfaceRef chart =<< getAreaSize area
@@ -287,7 +292,8 @@ runWindow heap = do
             Just (key, x, dy) -> do
                 let bytes = hValueUnit (heapHeader heap)
                     seconds = hSampleUnit (heapHeader heap)
-                let text = format "{}: {} at {:.2} {}" (key, formatNum bytesFormat dy, x, seconds)
+                    coeff = fromMaybe 0 $ M.lookup key coeffs
+                let text = format "{}: {} at {:.2} {}, grow ratio: {}/s" (key, formatNum bytesFormat dy, x, seconds, formatNum bytesFormat coeff)
                 labelSetText status (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
                 doHighlight <- askConfig cfgHighlight cfgRef
@@ -334,6 +340,7 @@ runWindow heap = do
       let filteredHeap = resampleHeap nSamples $ filterHeap fltr heap
       let datas = allSamplesData filteredHeap
       writeIORef dataRef datas
+      writeIORef growCoeffsRef $ allGrowCoeffs filteredHeap
       invalidateChart
       widgetQueueDraw area
 
@@ -364,6 +371,9 @@ runWindow heap = do
   -- All Gtk+ applications must run the main event loop. Control ends here and
   -- waits for an event to occur (like a key press or mouse event).
   GI.main
+
+allGrowCoeffs :: Heap -> M.Map T.Text Double
+allGrowCoeffs heap = M.fromList [(key, growCoefficient  key (heapSamples heap)) | key <- allKeys heap]
 
 convertColor :: GI.Gdk.RGBA -> IO (AlphaColour Double)
 convertColor rgba = do
