@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Operations where
 
@@ -54,17 +55,17 @@ each d list = go 0 d list
       | i == d = x : go 0 d xs
       | otherwise = go (i+1) d xs
 
-filterHeap :: Maybe (Double, Double) -> Int -> TraceStyle -> Int -> (T.Text -> Bool) -> Bool -> Heap -> Heap
-filterHeap mbTime n traceStyle tracePercent good showTrace heap =
+filterHeap :: Filter -> Heap -> Heap
+filterHeap (Filter {..}) heap =
     heap {heapSamples = map filterSample $ filter checkTime (heapSamples heap)}
   where
     keys = M.keys $ heapWeights heap
     sortedKeys = sortOn (negate . weight) keys
-    goodKeys = S.fromList $ take keysCount $ filter good sortedKeys
+    goodKeys = S.fromList $ take keysCount $ filter fltrGrep sortedKeys
     filterSample sample = sample {sampleItems = filterItems (sampleItems sample) }
 
     checkTime sample =
-      case mbTime of
+      case fltrTimeSlice of
         Nothing -> True
         Just (from, to) -> from <= sampleTime sample && sampleTime sample <= to
 
@@ -74,22 +75,22 @@ filterHeap mbTime n traceStyle tracePercent good showTrace heap =
 
     -- TraceTotal: Select keys, which in total give at least (100 - tracePercent) of weight
     totalWeight = sum $ M.elems weights
-    totalLimit = (1 - fromIntegral tracePercent / 100) * fromIntegral totalWeight
+    totalLimit = (1 - fromIntegral fltrTracePercent / 100) * fromIntegral totalWeight
     runningWeights = scanl (+) 0 sortedWeights
 
     -- TraceEach: Select keys, each of which give more than tracePercent of weight
-    eachLimit = (fromIntegral tracePercent / 100) * fromIntegral totalWeight
+    eachLimit = (fromIntegral fltrTracePercent / 100) * fromIntegral totalWeight
 
     bigKeysCount =
-      case traceStyle of
+      case fltrTraceStyle of
         TraceTotal -> length $ takeWhile (< totalLimit) (map fromIntegral runningWeights)
         TraceEach -> length $ takeWhile (>= eachLimit) (map fromIntegral sortedWeights)
 
     -- of that, select first N keys
-    keysCount = min bigKeysCount n
+    keysCount = min bigKeysCount fltrCount
 
     filterItems items
-      | showTrace =
+      | fltrShowTrace =
         let (goodItems, trace) = M.partitionWithKey isGoodItem items
         in  goodItems `M.union` sumTrace trace
       | otherwise = M.filterWithKey isGoodItem items

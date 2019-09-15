@@ -54,6 +54,28 @@ data SearchField = Name | Module | Package
 data TraceStyle = TraceTotal | TraceEach
   deriving (Eq, Show, Read, Enum, Bounded)
 
+data Filter = Filter {
+    fltrTimeSlice :: Maybe (Double, Double)
+  , fltrCount :: Int
+  , fltrTraceStyle :: TraceStyle
+  , fltrTracePercent :: Int
+  , fltrGrep :: T.Text -> Bool
+  , fltrShowTrace :: Bool
+  }
+
+dfltTracePercent :: Int
+dfltTracePercent = 1
+
+instance Default Filter where
+  def = Filter {
+            fltrTimeSlice = Nothing
+          , fltrCount = 10
+          , fltrTraceStyle = TraceTotal
+          , fltrTracePercent = dfltTracePercent
+          , fltrGrep = const True
+          , fltrShowTrace = True
+          }
+
 bytesFormat :: NumFormat
 bytesFormat = def {
     _nfThouSep = " ",

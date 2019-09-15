@@ -34,9 +34,6 @@ import SettingsDlg
 import Operations
 import GiCairoBridge
 
-dfltTracePercent :: Int
-dfltTracePercent = 1
-
 type LayoutPickFn = PickFn (LayoutPick Double Int Int)
 type ChartCache = M.Map (Maybe T.Text) (Surface, LayoutPickFn)
 type AreaSize = (Int32, Int32)
@@ -62,7 +59,7 @@ runWindow heap = do
   let invalidateChart = writeIORef chartSurfaceRef M.empty
 
   nSamples <- askConfig cfgSamplesNr cfgRef
-  let allDatas = allSamplesData $ filterHeap Nothing 10 TraceTotal dfltTracePercent (const True) True $ resampleHeap nSamples heap
+  let allDatas = allSamplesData $ filterHeap def $ resampleHeap nSamples heap
   dataRef <- newIORef allDatas
 
   fromXRef <- newIORef Nothing
@@ -293,13 +290,19 @@ runWindow heap = do
       drawTrace <- toggleButtonGetActive drawTraceCheckbox
       tracePercent <- spinButtonGetValueAsInt tracePercentSpin
       Just traceStyleId <- comboBoxGetActiveId traceStyleCombo
-      let traceStyle = read $ T.unpack traceStyleId
       timeFilters <- readIORef timeFilterRef
-      let mbTimeFilter = case timeFilters of
-                           [] -> Nothing
-                           (fltr : _) -> Just fltr
       nSamples <- askConfig cfgSamplesNr cfgRef
-      let datas = allSamplesData $ resampleHeap nSamples $ filterHeap mbTimeFilter (fromIntegral maxN) traceStyle (fromIntegral tracePercent) (checkItem field method text) drawTrace heap
+      let fltr = Filter {
+                    fltrTimeSlice =  case timeFilters of
+                                       [] -> Nothing
+                                       (fltr : _) -> Just fltr
+                  , fltrCount = fromIntegral maxN
+                  , fltrTraceStyle = read $ T.unpack traceStyleId
+                  , fltrTracePercent = fromIntegral tracePercent
+                  , fltrGrep = checkItem field method text
+                  , fltrShowTrace = drawTrace
+                }
+      let datas = allSamplesData $ resampleHeap nSamples $ filterHeap fltr heap
       writeIORef dataRef datas
       invalidateChart
       widgetQueueDraw area
