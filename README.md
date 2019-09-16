@@ -14,10 +14,14 @@ It may be nicer than use of [hp2pretty][1] because of the follwing features:
 * Areas on plot are higlighted interactively (on mouse-over), and name of
   selected area is dislpalyed in the statusbar. Statusbar also displays the
   timestamp pointed by cursor and amount of memory consumed by highlighted item
-  at that moment.
+  at that moment. Grow ratio of the item being highlited is displayed also; 
+  grow ratio is calculated based on time period that is currently shown.
 * Interactive filtering by item name, module or package name (module and
   package filtering works for `-hc` mode; for all other modes, only name
   filtering is useful).
+* Interactive filtering by grow rate. It is possible to ask to show, for example,
+  items that grow faster than 15 KiB/s, or slower than 1 MiB/s. Grow ratio is
+  calculated based on time period that is currently shown.
 * Interactive zoom:
   * Select time interval by dragging mouse with left button held pressed;
   * Zoom selected part of the chart by clicking "Zoom In" button in the bottom
