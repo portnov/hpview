@@ -55,6 +55,13 @@ data SearchField = Name | Module | Package
 data TraceStyle = TraceTotal | TraceEach
   deriving (Eq, Show, Read, Enum, Bounded)
 
+data BytesUnit =
+    Bytes
+  | KibiBytes
+  | MebiBytes
+  | GigiBytes
+  deriving (Eq, Show, Read)
+
 data GrowFilterType =
     FasterThan
   | SlowerThan

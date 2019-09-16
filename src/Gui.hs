@@ -129,14 +129,19 @@ runWindow heap = do
 
   growFilterSpin <- spinButtonNewWithRange (-1e10) (1e10) 1
   spinButtonSetValue growFilterSpin 0
-  growUnitsLbl <- labelNew (Just "Kb/s")
+  growFilterUnitCombo <- mkComboBox [
+                          (KibiBytes, "KiB/s")
+                        , (MebiBytes, "MiB/s")
+                        , (GigiBytes, "GiB/s")
+                        , (Bytes, "B/s")
+                      ]
 
   afterComboBoxChanged growFilterTypeCombo $ do
       Just fltrTypeId <- comboBoxGetActiveId growFilterTypeCombo
       let fltrType = read (T.unpack fltrTypeId) :: Maybe GrowFilterType
           hasFilter = fltrType /= Nothing
       widgetSetVisible growFilterSpin hasFilter
-      widgetSetVisible growUnitsLbl hasFilter
+      widgetSetVisible growFilterUnitCombo hasFilter
 
   saveBtn <- buttonNewFromIconName (Just "document-save") $ fromIntegral (fromEnum IconSizeMenu)
   
@@ -149,7 +154,7 @@ runWindow heap = do
   growBox <- boxNew OrientationHorizontal 0
   boxPackStart growBox growFilterTypeCombo False False 0
   boxPackStart growBox growFilterSpin True True 0
-  boxPackStart growBox growUnitsLbl False False 0
+  boxPackStart growBox growFilterUnitCombo False False 0
   containerAdd filterSettingsBox growBox
 
   (maxBox, maxSpin) <- withLabel "Max. items:" =<< spinButtonNewWithRange 0 100 1
@@ -353,10 +358,16 @@ runWindow heap = do
 
       Just growFilterTypeId <- comboBoxGetActiveId growFilterTypeCombo
       growFilterVal <- spinButtonGetValue growFilterSpin
+      Just growFilterUnitId <- comboBoxGetActiveId growFilterUnitCombo
       let growFilterType = read (T.unpack growFilterTypeId)
+          growFilterUnit = case read (T.unpack growFilterUnitId) of
+                             Bytes -> 1
+                             KibiBytes -> 1024
+                             MebiBytes -> 1024*1024
+                             GigiBytes -> 1024*1024*1024
           growFilter = case growFilterType of
                          Nothing -> Nothing
-                         Just f -> Just (f, 1024 * growFilterVal)
+                         Just f -> Just (f, growFilterUnit * growFilterVal)
 
       let fltr = Filter {
                     fltrTimeSlice =  case timeFilters of
@@ -398,7 +409,7 @@ runWindow heap = do
   widgetShowAll window
 
   widgetHide growFilterSpin
-  widgetHide growUnitsLbl
+  widgetHide growFilterUnitCombo
 
   -- All Gtk+ applications must run the main event loop. Control ends here and
   -- waits for an event to occur (like a key press or mouse event).
