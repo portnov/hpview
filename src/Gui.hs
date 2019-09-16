@@ -325,7 +325,7 @@ runWindow heap = do
                 let bytes = hValueUnit (heapHeader heap)
                     seconds = hSampleUnit (heapHeader heap)
                     coeff = fromMaybe 0 $ M.lookup key coeffs
-                let text = format "{}: {} at {:.2} {}, grow ratio: {}/s" (key, formatNum bytesFormat dy, x, seconds, formatNum bytesFormat coeff)
+                let text = format "{}: {} at {:.2} {}, grow ratio: {}/s" (key, formatBytes dy, x, seconds, formatBytes coeff)
                 labelSetText status (TL.toStrict text)
                 mbPrevKey <- readIORef highlightRef
                 doHighlight <- askConfig cfgHighlight cfgRef

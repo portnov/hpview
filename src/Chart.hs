@@ -103,5 +103,5 @@ makeChart chart =
              $ def
 
 showD :: Int -> String
-showD x = T.unpack $ formatNum bytesFormat (fromIntegral x)
+showD x = T.unpack $ formatBytes (fromIntegral x)
 

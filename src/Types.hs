@@ -92,6 +92,18 @@ bytesFormat = def {
     _nfSuffix = "B"
   }
 
+smallBytesFormat :: NumFormat
+smallBytesFormat = intFmt {
+    _nfThouSep = " ",
+    _nfSuffix = "B"
+  }
+
+formatBytes :: Real a => a -> T.Text
+formatBytes x
+  | abs x < 1 = "0B"
+  | abs x < 1024 = formatNum smallBytesFormat x
+  | otherwise = formatNum bytesFormat x
+
 data Config = Config {
       cfgShowLegend :: Bool
     , cfgHighlight :: Bool
