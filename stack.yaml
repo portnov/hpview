@@ -48,8 +48,8 @@ extra-deps:
     commit: 51d94b16f56fffe3464306d568e68e7a63e3b3bb
     subdirs:
       - chart
-  - git: https://github.com/portnov/formattable
-    commit: 57fbaeb3defd7c8c929695f5e059129937f91283
+  - git: https://github.com/Soostone/formattable.git
+    commit: 93935b295a451c76d4cf6244c0687b595abe5893
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

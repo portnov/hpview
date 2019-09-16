@@ -10,6 +10,7 @@ import Data.Colour.RGBSpace.HSL
 import qualified Data.Text as T
 import Data.Hashable
 import Data.Word
+import Data.List (genericLength)
 import Data.Default.Class
 import Graphics.Rendering.Chart
 import Numeric (showEFloat, showFFloat)
@@ -72,7 +73,7 @@ makeChart chart =
                          (axis_line_style %~ setLineColor) .
                          (axis_grid_style .~ gridStyle)
 
-      yAxis = laxis_generate .~ (autoScaledIntAxis yAxisParams) $ setAxisColor def
+      yAxis = laxis_generate .~ (bytesAxis yAxisParams) $ setAxisColor def
       yAxisParams = la_labelf .~ (map showD) $ (defaultIntAxis :: LinearAxisParams Int)
 
       xAxis = setAxisColor def
@@ -104,4 +105,53 @@ makeChart chart =
 
 showD :: Int -> String
 showD x = T.unpack $ formatBytes (fromIntegral x)
+
+bytesAxis :: (Integral i, PlotValue i) =>
+                     LinearAxisParams i -> AxisFn i
+bytesAxis lap ps = scaledBytesAxis lap rs ps
+  where
+    rs = (minimum ps,maximum ps)
+
+scaledBytesAxis :: (Integral i, PlotValue i) =>
+                 LinearAxisParams i -> (i,i) -> AxisFn i
+scaledBytesAxis lap (minI,maxI) ps =
+    makeAxis (_la_labelf lap) (labelvs,tickvs,gridvs)
+  where
+    range []  = (0,1)
+    range _   | minI == maxI = (fromIntegral $ minI-1, fromIntegral $ minI+1)
+              | otherwise    = (fromIntegral   minI,   fromIntegral   maxI)
+--  labelvs  :: [i]
+    labelvs   = stepsInt (fromIntegral $ _la_nLabels lap) r
+    tickvs    = stepsInt (fromIntegral $ _la_nTicks lap)
+                                  ( fromIntegral $ minimum labelvs
+                                  , fromIntegral $ maximum labelvs )
+    gridvs    = labelvs
+    r         = range ps
+
+stepsInt :: Integral a => a -> Range -> [a]
+stepsInt nSteps range = bestSize (goodness alt0) alt0 alts
+  where
+    bestSize n a (a':as) = let n' = goodness a' in
+                           if n' < n then bestSize n' a' as else a
+    bestSize _ _ []      = []
+
+    goodness vs          = abs (genericLength vs - nSteps)
+
+    (alt0:alts)          = map (\n -> steps n range) sampleSteps'
+
+    -- throw away sampleSteps that are definitely too small as
+    -- they takes a long time to process                           
+    sampleSteps'         = let rangeMag = ceiling (snd range - fst range)
+
+                               (s1,s2) = span (< (rangeMag `div` nSteps)) sampleSteps
+                           in ((reverse . take 5 . reverse) s1) ++ s2
+
+    -- generate all possible step sizes
+    sampleSteps          = [1,2,5, 10] ++ sampleSteps1
+    sampleSteps1         = [32, 64, 128, 256, 512] ++ map (*32) sampleSteps1
+
+    steps size (minV,maxV) = takeWhile (<b) [a,a+size..] ++ [b]
+      where
+        a = (floor   (minV / fromIntegral size)) * size
+        b = (ceiling (maxV / fromIntegral size)) * size
 

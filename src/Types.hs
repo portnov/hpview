@@ -94,8 +94,8 @@ instance Default Filter where
 bytesFormat :: NumFormat
 bytesFormat = def {
     _nfThouSep = " ",
-    _nfPrec = Just (0, Decimals),
-    _nfStyle = SIStyle,
+    _nfPrec = Just (2, Decimals),
+    _nfStyle = BinarySIStyle,
     _nfSuffix = "B"
   }
 
