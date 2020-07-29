@@ -12,7 +12,7 @@ It may be nicer than use of [hp2pretty][1] because of the follwing features:
 * No need to convert `.hp` to `.svg` and then open `.svg` with another program,
   just run `hpview file.hp`.
 * Areas on plot are higlighted interactively (on mouse-over), and name of
-  selected area is dislpalyed in the statusbar. Statusbar also displays the
+  selected area is displayed in the statusbar. Statusbar also displays the
   timestamp pointed by cursor and amount of memory consumed by highlighted item
   at that moment. Grow ratio of the item being highlited is displayed also; 
   grow ratio is calculated based on time period that is currently shown.
