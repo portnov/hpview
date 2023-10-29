@@ -17,20 +17,20 @@ import Operations (calcNameWeight, allKeys)
 import Algebra
 
 data ParserState = ParserState {
-    psHeader :: ! Header
-  , psHeaderParsed :: ! Bool
-  , psSamples :: ! [Sample ItemsMap]
-  , psCurrentSample :: ! (Sample ItemsMap)
+    psHeader :: !Header
+  , psHeaderParsed :: !Bool
+  , psSamples :: ![Sample ItemsMap]
+  , psCurrentSample :: !(Sample ItemsMap)
   }
 
 data LineData =
-    JOB ! T.Text
-  | DATE ! T.Text
-  | SAMPLE_UNIT ! T.Text
-  | VALUE_UNIT ! T.Text
-  | BEGIN_SAMPLE ! Double
-  | END_SAMPLE ! Double
-  | DATA ! T.Text ! Int
+    JOB !T.Text
+  | DATE !T.Text
+  | SAMPLE_UNIT !T.Text
+  | VALUE_UNIT !T.Text
+  | BEGIN_SAMPLE !Double
+  | END_SAMPLE !Double
+  | DATA !T.Text !Int
   deriving (Show)
 
 initState :: ParserState
@@ -81,7 +81,7 @@ parseLine line = do
     if not (psHeaderParsed st)
       then do
         case eitherResult $ parse pHeaderLine line of
-          Left err -> fail $ "Can't parse header line: " ++ show line ++ ": " ++ err
+          Left err -> error $ "Can't parse header line: " ++ show line ++ ": " ++ err
           Right lineData -> processLine lineData
       else 
         if begin_sample `T.isPrefixOf` line
@@ -97,7 +97,7 @@ parseSample :: Monad m => T.Text -> T.Text -> m Double
 parseSample name line = do
   let rest = T.drop (T.length name + 1) line
   case parseOnly (pDouble <* endOfInput) rest of
-    Left err -> fail $ "Can't parse double: " ++ show rest ++ ": " ++ err
+    Left err -> error $ "Can't parse double: " ++ show rest ++ ": " ++ err
     Right value -> return value
 
 -- | Parse data item line
@@ -105,9 +105,9 @@ parseItem :: Monad m => T.Text -> m (T.Text, Int)
 parseItem line = do
   let (name, rest) = T.break (== '\t') line
   if T.null rest
-    then fail $ "Can't parse data line: " ++ show line
+    then error $ "Can't parse data line: " ++ show line
     else case TR.decimal (T.tail rest) of
-           Left err -> fail $ "can't parse decimal: " ++ show rest ++ ": " ++ err
+           Left err -> error $ "can't parse decimal: " ++ show rest ++ ": " ++ err
            Right (value, "") -> return (name, value)
     
 pHeaderLine :: Parser LineData

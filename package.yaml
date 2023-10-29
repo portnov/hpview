@@ -44,7 +44,6 @@ dependencies:
 - hashable
 - text-format-heavy
 - regex-tdfa
-- regex-tdfa-text
 - formattable
 - statistics-linreg
 

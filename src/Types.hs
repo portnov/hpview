@@ -9,32 +9,32 @@ import Data.Colour
 import Formattable.NumFormat
 
 data Heap = Heap {
-    heapHeader :: ! Header
-  , heapSamples :: ! [Sample ItemsMap]
+    heapHeader :: !Header
+  , heapSamples :: ![Sample ItemsMap]
   , heapWeights :: M.Map T.Text Int
   , heapGrowCoeffs :: M.Map T.Text Double
   }
   deriving (Eq, Show)
 
 data Header = Header {
-    hJob :: ! T.Text
-  , hDate :: ! T.Text
-  , hSampleUnit :: ! T.Text
-  , hValueUnit :: ! T.Text
+    hJob :: !T.Text
+  , hDate :: !T.Text
+  , hSampleUnit :: !T.Text
+  , hValueUnit :: !T.Text
   }
   deriving (Eq, Show)
 
 data Item = Item {
-    itemName :: ! T.Text
-  , itemValue :: ! Int
+    itemName :: !T.Text
+  , itemValue :: !Int
   }
   deriving (Eq, Show)
 
 type ItemsMap = (M.Map T.Text Int)
 
 data Sample m = Sample {
-    sampleTime :: ! Double
-  , sampleItems :: ! m
+    sampleTime :: !Double
+  , sampleItems :: !m
   }
   deriving (Eq, Show)
 

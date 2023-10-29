@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a1783c7449f47826edfe11f59aaf9d532901ee613de753f5d13730856d107781
+-- hash: 71639bc1262a2c00f631047ef84552002e89b1a8b3e0fc0e16e95eb9f81b0adc
 
 name:           hpview
 version:        0.1.0.0
@@ -64,7 +64,6 @@ executable hpview
     , lens
     , mtl
     , regex-tdfa
-    , regex-tdfa-text
     , statistics-linreg
     , text
     , text-format-heavy
